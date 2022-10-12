@@ -20,6 +20,9 @@ vendor/
 *.egg
 .pylint.d
 
+# VsCode
+.vscode
+
 # calibre-web
 *.db
 *.log

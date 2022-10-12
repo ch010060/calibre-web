@@ -166,10 +166,10 @@ BookMeta = namedtuple('BookMeta', 'file_path, extension, title, author, cover, d
 STABLE_VERSION = {'version': '0.6.19'}
 
 NIGHTLY_VERSION = dict()
-NIGHTLY_VERSION[0] = '$Format:%H$'
+# NIGHTLY_VERSION[0] = '$Format:%H$'
+NIGHTLY_VERSION[0] = 'olivier'
 NIGHTLY_VERSION[1] = '$Format:%cI$'
-# NIGHTLY_VERSION[0] = 'bb7d2c6273ae4560e83950d36d64533343623a57'
-# NIGHTLY_VERSION[1] = '2018-09-09T10:13:08+02:00'
+#NIGHTLY_VERSION[1] = '2018-09-09T10:13:08+02:00'
 
 # CACHE
 CACHE_TYPE_THUMBNAILS    = 'thumbnails'
