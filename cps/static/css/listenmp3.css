@@ -1,0 +1,14 @@
+.full-height {
+    height: 100vh;
+}
+
+.cover #detailcover {
+    -o-object-position: center top;
+    object-position: center top;
+    -o-object-fit: contain;
+    object-fit: contain;
+
+    height: 100%;
+    margin: 0 auto;
+    display: block;
+}
