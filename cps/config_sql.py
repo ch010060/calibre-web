@@ -148,6 +148,8 @@ class _Settings(_Base):
     schedule_generate_series_covers = Column(Boolean, default=False)
     schedule_reconnect = Column(Boolean, default=False)
 
+    config_use_comics_lazyload = Column(Boolean, default=False)
+
     def __repr__(self):
         return self.__class__.__name__
 

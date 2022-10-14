@@ -56,6 +56,7 @@ from .usermanagement import login_required_if_no_ano
 from .kobo_sync_status import remove_synced_book
 from .render_template import render_title_template
 from .kobo_sync_status import change_archived_books
+from .comic import use_comic_meta
 
 feature_support = {
     'ldap': bool(services.ldap),
@@ -1535,7 +1536,7 @@ def read_book(book_id, book_format):
                     if book.series_index:
                         title = title + " #" + '{0:.2f}'.format(book.series_index).rstrip('0').rstrip('.')
                 log.debug(u"Start comic reader for %d", book_id)
-                if config.config_use_google_drive:
+                if config.config_use_google_drive or use_comic_meta != True or config.config_use_comics_lazyload == False:
                     return render_title_template('readcbr.html', comicfile=all_name, title=title,
                                                 extension=fileExt, bookmark=bookmark)
                 else:
