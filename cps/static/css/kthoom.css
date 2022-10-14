@@ -238,3 +238,8 @@ th {
   -ms-overflow-style: none;  /* IE and Edge */
   scrollbar-width: none;  /* Firefox */
 }
+
+.mainImageWrapper{
+  display: flex;
+  justify-content: center;
+}

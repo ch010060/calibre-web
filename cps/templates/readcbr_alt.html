@@ -58,7 +58,10 @@
 
     <div id="mainContent" tabindex="-1">
       <div id="mainText" style="display:none"></div>
-      <canvas id="mainImage"></canvas>
+      <div class="mainImageWrapper">
+        <canvas id="mainImage"></canvas>
+        <canvas id="mainImage2"></canvas>
+      </div>
     </div>
     <div id="left" class="arrow" onclick="showLeftPage(); setBookmark();">‹</div>
     <div id="right" class="arrow" onclick="showRightPage(); setBookmark();">›</div>
@@ -199,6 +202,17 @@
                       {{_('Show')}}</label>
                     <label for="hideScrollbar"><input type="radio" id="hideScrollbar" name="scrollbar" value="0" />
                       {{_('Hide')}}</label>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <th>{{_('Page Mode')}}:</th>
+                <td>
+                  <div class="inputs">
+                    <label for="1PageMode"><input type="radio" id="1PageMode" name="pageMode" value="1" />
+                      {{_('1 Page')}}</label>
+                    <label for="2PageMode"><input type="radio" id="2PageMode" name="pageMode" value="2" />
+                      {{_('2 Pages')}}</label>
                   </div>
                 </td>
               </tr>

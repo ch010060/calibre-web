@@ -26,6 +26,7 @@ if (window.opera) {
 }
 
 var kthoom;
+var currentPageIsDoublePage = false;
 
 // gets the element with the given id
 function getElem(id) {
@@ -53,7 +54,8 @@ kthoom.Key = {
     N: 78, O: 79, P: 80, Q: 81, R: 82, S: 83, T: 84, U: 85, V: 86, W: 87, X: 88, Y: 89, Z: 90,
     QUESTION_MARK: 191,
     LEFT_SQUARE_BRACKET: 219,
-    RIGHT_SQUARE_BRACKET: 221
+    RIGHT_SQUARE_BRACKET: 221,
+    NUM1: 49, NUM2: 50
 };
 
 // global variables
@@ -62,6 +64,7 @@ var currentImage = 0;
 var imageFiles = [];
 var imageFilenames = [];
 var totalImages = 0;
+var doublePages = [];
 
 var settings = {
     hflip: false,
@@ -71,7 +74,9 @@ var settings = {
     theme: "light",
     direction: 0, // 0 = Left to Right, 1 = Right to Left
     nextPage: 0, // 0 = Reset to Top, 1 = Remember Position
-    scrollbar: 1 // 0 = Hide Scrollbar, 1 = Show Scrollbar
+    scrollbar: 1, // 0 = Hide Scrollbar, 1 = Show Scrollbar
+    pageMode: 1
+
 };
 
 kthoom.saveSettings = function () {
@@ -263,8 +268,7 @@ function scrollTocToActive() {
     }, 200);
 }
 
-function updatePage() {
-    $(".page").text((currentImage + 1) + "/" + totalImages);
+async function updatePage() {
 
     // Mark the current page in the TOC
     $("#tocView a[data-page]")
@@ -277,11 +281,22 @@ function updatePage() {
 
     scrollTocToActive();
     updateProgress();
+
+
     if (imageFiles[currentImage]) {
-        setImage(imageFiles[currentImage].dataURI);
+        await setImage(currentImage);
     } else {
-        setImage("loading");
+        await setImage("loading");
     }
+
+
+
+
+    let pageDisplayed = settings.pageMode == 2 && !currentPageIsDoublePage ? 2 : 1;
+    let textPageProgress = pageDisplayed == 1 ? (currentImage + 1) + "/" + totalImages :
+        (currentImage + 1) + "-" + (currentImage + 2) + "/" + totalImages;
+
+    $(".page").text(textPageProgress);
 
     $("body").toggleClass("dark-theme", settings.theme === "dark");
     $("#mainContent").toggleClass("disabled-scrollbar", settings.scrollbar === 0);
@@ -321,101 +336,391 @@ function updateProgress(loadPercentage) {
     $("#progress .bar-read").css({ width: totalImages === 0 ? 0 : Math.round((currentImage + 1) / totalImages * 100) + "%" });
 }
 
-function setImage(url) {
-    var canvas = $("#mainImage")[0];
-    var x = $("#mainImage")[0].getContext("2d");
-    $("#mainText").hide();
-    if (url === "loading") {
-        updateScale(true);
-        canvas.width = innerWidth - 100;
-        canvas.height = 200;
-        x.fillStyle = "black";
-        x.textAlign = "center";
-        x.font = "24px sans-serif";
-        x.strokeStyle = "black";
-        x.fillText("Loading Page #" + (currentImage + 1), innerWidth / 2, 100);
-    } else {
-        if (url === "error") {
+async function onePageRender() {
+    $("#mainImage2").hide();
+    // single page 
+    await LoadImage1(currentImage);
+    // var canvas = $("#mainImage")[0];
+    // var x = $("#mainImage")[0].getContext("2d");
+    // $("#mainText").hide();
+    // if (currentImage === "loading") {
+    //     updateScale(true);
+    //     canvas.width = innerWidth - 100;
+    //     canvas.height = 200;
+    //     x.fillStyle = "black";
+    //     x.textAlign = "center";
+    //     x.font = "24px sans-serif";
+    //     x.strokeStyle = "black";
+    //     x.fillText("Loading Page #" + (currentImage + 1), innerWidth / 2, 100);
+    // } else {
+    //     if (currentImage === "error") {
+    //         updateScale(true);
+    //         canvas.width = innerWidth - 100;
+    //         canvas.height = 200;
+    //         x.fillStyle = "black";
+    //         x.textAlign = "center";
+    //         x.font = "24px sans-serif";
+    //         x.strokeStyle = "black";
+    //         x.fillText("Unable to decompress image #" + (currentImage + 1), innerWidth / 2, 100);
+    //     } else {
+    //         if ($("body").css("scrollHeight") / innerHeight > 1) {
+    //             $("body").css("overflowY", "scroll");
+    //         }
+
+    //         var img = new Image();
+    //         var url = imageFiles[currentImage].dataURI
+
+    //         img.onerror = function () {
+    //             canvas.width = innerWidth - 100;
+    //             canvas.height = 300;
+    //             updateScale(true);
+    //             x.fillStyle = "black";
+    //             x.font = "50px sans-serif";
+    //             x.strokeStyle = "black";
+    //             x.fillText("Page #" + (currentImage + 1) + " (" +
+    //                 imageFiles[currentImage].filename + ")", innerWidth / 2, 100);
+    //             x.fillStyle = "black";
+    //             x.fillText("Is corrupt or not an image", innerWidth / 2, 200);
+
+
+    //             var xhr = new XMLHttpRequest();
+    //             if (/(html|htm)$/.test(imageFiles[currentImage].filename)) {
+    //                 xhr.open("GET", url, true);
+    //                 xhr.onload = function () {
+    //                     $("#mainText").css("display", "");
+    //                     $("#mainText").innerHTML("<iframe style=\"width:100%;height:700px;border:0\" src=\"data:text/html," + escape(xhr.responseText) + "\"></iframe>");
+    //                 };
+    //                 xhr.send(null);
+    //             } else if (!/(jpg|jpeg|png|gif|webp)$/.test(imageFiles[currentImage].filename) && imageFiles[currentImage].data.uncompressedSize < 10 * 1024) {
+    //                 xhr.open("GET", url, true);
+    //                 xhr.onload = function () {
+    //                     $("#mainText").css("display", "");
+    //                     $("#mainText").innerText(xhr.responseText);
+    //                 };
+    //                 xhr.send(null);
+    //             }
+    //         };
+    //         img.onload = function () {
+    //             var h = img.height,
+    //                 w = img.width,
+    //                 sw = w,
+    //                 sh = h;
+    //             settings.rotateTimes = (4 + settings.rotateTimes) % 4;
+    //             x.save();
+    //             if (settings.rotateTimes % 2 === 1) {
+    //                 sh = w;
+    //                 sw = h;
+    //             }
+    //             canvas.height = sh;
+    //             canvas.width = sw;
+    //             x.translate(sw / 2, sh / 2);
+    //             x.rotate(Math.PI / 2 * settings.rotateTimes);
+    //             x.translate(-w / 2, -h / 2);
+    //             if (settings.vflip) {
+    //                 x.scale(1, -1);
+    //                 x.translate(0, -h);
+    //             }
+    //             if (settings.hflip) {
+    //                 x.scale(-1, 1);
+    //                 x.translate(-w, 0);
+    //             }
+    //             canvas.style.display = "none";
+    //             scrollTo(0, 0);
+    //             x.drawImage(img, 0, 0);
+
+    //             updateScale(false);
+
+    //             canvas.style.display = "";
+    //             $("body").css("overflowY", "");
+    //             x.restore();
+    //         };
+    //         img.src = url;
+    //     }
+    // }
+}
+
+
+function isDoublePage(h, w) {
+    if (settings.rotateTimes == 0 || settings.rotateTimes == 2) {
+        if (w > h) {
+            return true;
+        }
+    } else if (settings.rotateTimes == 1 || settings.rotateTimes == 3) {
+        if (h > w) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function LoadImage1(currentImage) {
+    return new Promise((resolve, reject) => {
+
+        // page 1
+        var canvas = $("#mainImage")[0];
+        var x = $("#mainImage")[0].getContext("2d");
+        $("#mainText").hide();
+
+        if (currentImage === "loading") {
             updateScale(true);
-            canvas.width = innerWidth - 100;
+            canvas.width = innerWidth / 2 - 100;
             canvas.height = 200;
             x.fillStyle = "black";
             x.textAlign = "center";
             x.font = "24px sans-serif";
             x.strokeStyle = "black";
-            x.fillText("Unable to decompress image #" + (currentImage + 1), innerWidth / 2, 100);
+            x.fillText("Loading Page #" + (currentImage + 1), canvas.width / 2, 100);
         } else {
-            if ($("body").css("scrollHeight") / innerHeight > 1) {
-                $("body").css("overflowY", "scroll");
-            }
-
-            var img = new Image();
-            img.onerror = function () {
-                canvas.width = innerWidth - 100;
-                canvas.height = 300;
+            if (currentImage === "error") {
                 updateScale(true);
+                canvas.width = innerWidth / 2 - 100;
+                canvas.height = 200;
                 x.fillStyle = "black";
-                x.font = "50px sans-serif";
+                x.textAlign = "center";
+                x.font = "24px sans-serif";
                 x.strokeStyle = "black";
-                x.fillText("Page #" + (currentImage + 1) + " (" +
-                    imageFiles[currentImage].filename + ")", innerWidth / 2, 100);
-                x.fillStyle = "black";
-                x.fillText("Is corrupt or not an image", innerWidth / 2, 200);
+                x.fillText("Unable to decompress image #" + (currentImage + 1), canvas.width / 2, 100);
+            } else {
+                // scroll top
+                if ($("body").css("scrollHeight") / innerHeight > 1) {
+                    $("body").css("overflowY", "scroll");
+                }
 
-                var xhr = new XMLHttpRequest();
-                if (/(html|htm)$/.test(imageFiles[currentImage].filename)) {
-                    xhr.open("GET", url, true);
-                    xhr.onload = function () {
-                        $("#mainText").css("display", "");
-                        $("#mainText").innerHTML("<iframe style=\"width:100%;height:700px;border:0\" src=\"data:text/html," + escape(xhr.responseText) + "\"></iframe>");
-                    };
-                    xhr.send(null);
-                } else if (!/(jpg|jpeg|png|gif|webp)$/.test(imageFiles[currentImage].filename) && imageFiles[currentImage].data.uncompressedSize < 10 * 1024) {
-                    xhr.open("GET", url, true);
-                    xhr.onload = function () {
-                        $("#mainText").css("display", "");
-                        $("#mainText").innerText(xhr.responseText);
-                    };
-                    xhr.send(null);
-                }
-            };
-            img.onload = function () {
-                var h = img.height,
-                    w = img.width,
-                    sw = w,
-                    sh = h;
-                settings.rotateTimes = (4 + settings.rotateTimes) % 4;
-                x.save();
-                if (settings.rotateTimes % 2 === 1) {
-                    sh = w;
-                    sw = h;
-                }
-                canvas.height = sh;
-                canvas.width = sw;
-                x.translate(sw / 2, sh / 2);
-                x.rotate(Math.PI / 2 * settings.rotateTimes);
-                x.translate(-w / 2, -h / 2);
-                if (settings.vflip) {
-                    x.scale(1, -1);
-                    x.translate(0, -h);
-                }
-                if (settings.hflip) {
-                    x.scale(-1, 1);
-                    x.translate(-w, 0);
-                }
-                canvas.style.display = "none";
-                scrollTo(0, 0);
-                x.drawImage(img, 0, 0);
+                var img = new Image();
+                var url = imageFiles[currentImage].dataURI
+                img.onerror = function () {
+                    canvas.width = innerWidth / 2 - 100;
+                    canvas.height = 300;
+                    updateScale(true);
+                    x.fillStyle = "black";
+                    x.font = "50px sans-serif";
+                    x.strokeStyle = "black";
+                    x.fillText("Page #" + (currentImage + 1) + " (" +
+                        imageFiles[currentImage].filename + ")", canvas.width / 2, 100);
+                    x.fillStyle = "black";
+                    x.fillText("Is corrupt or not an image", canvas.width / 2, 200);
 
-                updateScale(false);
+                    var xhr = new XMLHttpRequest();
+                    if (/(html|htm)$/.test(imageFiles[currentImage].filename)) {
+                        xhr.open("GET", url, true);
+                        xhr.onload = function () {
+                            $("#mainText").css("display", "");
+                            $("#mainText").innerHTML("<iframe style=\"width:100%;height:700px;border:0\" src=\"data:text/html," + escape(xhr.responseText) + "\"></iframe>");
+                        };
+                        xhr.send(null);
+                    } else if (!/(jpg|jpeg|png|gif|webp)$/.test(imageFiles[currentImage].filename) && imageFiles[currentImage].data.uncompressedSize < 10 * 1024) {
+                        xhr.open("GET", url, true);
+                        xhr.onload = function () {
+                            $("#mainText").css("display", "");
+                            $("#mainText").innerText(xhr.responseText);
+                        };
+                        xhr.send(null);
+                    }
+                    reject;
+                    return;
+                };
 
-                canvas.style.display = "";
-                $("body").css("overflowY", "");
-                x.restore();
-            };
-            img.src = url;
+                img.onload = function () {
+                    var h = img.height,
+                        w = img.width,
+                        sw = w,
+                        sh = h;
+                    settings.rotateTimes = (4 + settings.rotateTimes) % 4;
+                    x.save();
+                    if (settings.rotateTimes % 2 === 1) {
+                        sh = w;
+                        sw = h;
+                    }
+
+                    if (doublePages[currentImage] === undefined) {
+                        currentPageIsDoublePage = isDoublePage(h, w);
+                        doublePages[currentImage] = currentPageIsDoublePage;
+                    }
+                    else
+                        currentPageIsDoublePage = doublePages[currentImage];
+
+                    canvas.height = sh;
+                    canvas.width = sw;
+                    x.translate(sw / 2, sh / 2);
+                    x.rotate(Math.PI / 2 * settings.rotateTimes);
+                    x.translate(-w / 2, -h / 2);
+                    if (settings.vflip) {
+                        x.scale(1, -1);
+                        x.translate(0, -h);
+                    }
+                    if (settings.hflip) {
+                        x.scale(-1, 1);
+                        x.translate(-w, 0);
+                    }
+                    canvas.style.display = "none";
+                    scrollTo(0, 0);
+                    x.drawImage(img, 0, 0);
+
+                    updateScale(false);
+
+                    canvas.style.display = "";
+                    $("body").css("overflowY", "");
+                    x.restore();
+                    resolve();
+                };
+                img.src = url;
+            }
         }
+    })
+}
+
+function LoadImage2(currentImage) {
+    return new Promise((resolve, reject) => {
+        // page 2
+        var canvas2 = $("#mainImage2")[0];
+        var x2 = $("#mainImage2")[0].getContext("2d");
+        $("#mainText").hide();
+
+        if (currentImage === "loading") {
+            updateScale(true);
+            canvas2.width = innerWidth / 2 - 100;
+            canvas2.height = 200;
+            x2.fillStyle = "black";
+            x2.textAlign = "center";
+            x2.font = "24px sans-serif";
+            x2.strokeStyle = "black";
+            x2.fillText("Loading Page #" + (currentImage + 2), canvas2.width / 2, 100);
+        } else {
+            if (currentImage === "error") {
+                updateScale(true);
+                canvas2.width = innerWidth / 2 - 100;
+                canvas2.height = 200;
+                x2.fillStyle = "black";
+                x2.textAlign = "center";
+                x2.font = "24px sans-serif";
+                x2.strokeStyle = "black";
+                x2.fillText("Unable to decompress image #" + (currentImage + 2), canvas2.width / 2, 100);
+            } else {
+                // scroll top
+                if ($("body").css("scrollHeight") / innerHeight > 1) {
+                    $("body").css("overflowY", "scroll");
+                }
+
+                var img2 = new Image();
+                var url2 = imageFiles[currentImage + 1].dataURI
+                img2.onerror = function () {
+                    canvas2.width = innerWidth / 2 - 100;
+                    canvas2.height = 300;
+                    updateScale(true);
+                    x2.fillStyle = "black";
+                    x2.font = "50px sans-serif";
+                    x2.strokeStyle = "black";
+                    x2.fillText("Page #" + (currentImage + 2) + " (" +
+                        imageFiles[currentImage + 1].filename + ")", canvas2.width / 2, 100);
+                    x2.fillStyle = "black";
+                    x2.fillText("Is corrupt or not an image", canvas2.width / 2, 200);
+
+                    var xhr = new XMLHttpRequest();
+                    if (/(html|htm)$/.test(imageFiles[currentImage + 1].filename)) {
+                        xhr.open("GET", url2, true);
+                        xhr.onload = function () {
+                            $("#mainText").css("display", "");
+                            $("#mainText").innerHTML("<iframe style=\"width:100%;height:700px;border:0\" src=\"data:text/html," + escape(xhr.responseText) + "\"></iframe>");
+                        };
+                        xhr.send(null);
+                    } else if (!/(jpg|jpeg|png|gif|webp)$/.test(imageFiles[currentImage + 1].filename) && imageFiles[currentImage + 1].data.uncompressedSize < 10 * 1024) {
+                        xhr.open("GET", url2, true);
+                        xhr.onload = function () {
+                            $("#mainText").css("display", "");
+                            $("#mainText").innerText(xhr.responseText);
+                        };
+                        xhr.send(null);
+                    }
+                    reject;
+                    return;
+                };
+
+
+                img2.onload = function () {
+                    var h = img2.height,
+                        w = img2.width,
+                        sw = w,
+                        sh = h;
+                    settings.rotateTimes = (4 + settings.rotateTimes) % 4;
+                    x2.save();
+                    if (settings.rotateTimes % 2 === 1) {
+                        sh = w;
+                        sw = h;
+                    }
+
+                    if (doublePages[currentImage + 1] === undefined) {
+                        currentPageIsDoublePage = isDoublePage(h, w);
+                        doublePages[currentImage + 1] = currentPageIsDoublePage;
+                    }
+                    else
+                        currentPageIsDoublePage = doublePages[currentImage + 1];
+
+                    if (currentPageIsDoublePage == true) {
+                        // the second page is a double page, skip it.
+                        $("#mainImage2").hide();
+
+                        resolve();
+                        return;
+                    }
+
+                    canvas2.height = sh;
+                    canvas2.width = sw;
+                    x2.translate(sw / 2, sh / 2);
+                    x2.rotate(Math.PI / 2 * settings.rotateTimes);
+                    x2.translate(-w / 2, -h / 2);
+                    if (settings.vflip) {
+                        x2.scale(1, -1);
+                        x2.translate(0, -h);
+                    }
+                    if (settings.hflip) {
+                        x2.scale(-1, 1);
+                        x2.translate(-w, 0);
+                    }
+                    canvas2.style.display = "none";
+                    scrollTo(0, 0);
+                    x2.drawImage(img2, 0, 0);
+
+                    updateScale(false);
+
+                    canvas2.style.display = "";
+                    $("body").css("overflowY", "");
+                    x2.restore();
+                    resolve();
+                };
+                img2.src = url2;
+            }
+        }
+    })
+}
+
+async function twoPagesRender(currentImage) {
+
+    $("#mainImage2").show();
+    // double page 
+    await LoadImage1(currentImage);
+
+
+    if (currentPageIsDoublePage == true) {
+        // the first page is a double page, skip the next page
+        $("#mainImage2").hide();
+        return;
     }
+
+    await LoadImage2(currentImage);
+
+}
+
+function setImage(currentImage) {
+    return new Promise(async (resolve, reject) => {
+
+        if (settings.pageMode == 1) {
+            await onePageRender(currentImage);
+        }
+        else {
+            await twoPagesRender(currentImage);
+        }
+        resolve();
+    });
 }
 
 function showLeftPage() {
@@ -435,10 +740,10 @@ function showRightPage() {
 }
 
 function showPrevPage() {
-    currentImage--;
+    currentImage = settings.pageMode == 2 && !currentPageIsDoublePage && !doublePages[currentImage - 1] ? currentImage - 2 : currentImage - 1;
     if (currentImage < 0) {
-        // Freeze on the current page.
-        currentImage++;
+        // Freeze on the first page.
+        currentImage = 0;
     } else {
         addPageRange(calibre.fetchPageUrl, currentImage, 2, 2);
         // if (imageFiles[currentImage] === undefined) {
@@ -452,10 +757,10 @@ function showPrevPage() {
 }
 
 function showNextPage() {
-    currentImage++;
+    currentImage = settings.pageMode == 2 && !currentPageIsDoublePage ? currentImage + 2 : currentImage + 1;
     if (currentImage >= Math.max(totalImages, imageFiles.length)) {
         // Freeze on the current page.
-        currentImage--;
+        currentImage = Math.max(totalImages, imageFiles.length) - 1;
     } else {
         addPageRange(calibre.fetchPageUrl, currentImage, 2, 2);
         // if (imageFiles[currentImage] === undefined) {
@@ -470,28 +775,38 @@ function showNextPage() {
 
 function updateScale(clear) {
     var mainImageStyle = getElem("mainImage").style;
+    var mainImageStyle2 = getElem("mainImage2").style;
     mainImageStyle.width = "";
+    mainImageStyle2.width = "";
     mainImageStyle.height = "";
+    mainImageStyle2.height = "";
     mainImageStyle.maxWidth = "";
+    mainImageStyle2.maxWidth = "";
     mainImageStyle.maxHeight = "";
+    mainImageStyle2.maxHeight = "";
     var maxheight = innerHeight - 50;
 
     if (!clear) {
         switch (settings.fitMode) {
             case kthoom.Key.B:
                 mainImageStyle.maxWidth = "100%";
+                mainImageStyle2.maxWidth = "100%";
                 mainImageStyle.maxHeight = maxheight + "px";
+                mainImageStyle2.maxHeight = maxheight + "px";
                 break;
             case kthoom.Key.H:
                 mainImageStyle.height = maxheight + "px";
+                mainImageStyle2.height = maxheight + "px";
                 break;
             case kthoom.Key.W:
                 mainImageStyle.width = "100%";
+                mainImageStyle2.width = "100%";
                 break;
             default:
                 break;
         }
     }
+
     $("#mainContent").css({ maxHeight: maxheight + 5 });
     kthoom.setSettings();
     kthoom.saveSettings();
@@ -570,6 +885,19 @@ function keyHandler(evt) {
                 showNextPage();
             }
             break;
+        case kthoom.Key.NUM1:
+            if (hasModifier) break;
+            settings.pageMode = 1;
+            // updatePageMode();
+            updatePage();
+            break;
+        case kthoom.Key.NUM2:
+            if (hasModifier) break;
+            settings.pageMode = 2;
+            // updatePageMode();
+            updatePage();
+            break;
+
         default:
             //console.log('KeyCode', evt.keyCode);
             break;
@@ -591,7 +919,17 @@ async function addPageRange(baseFilename, baseIndex, nbPagesBefore, nbPagesAfter
     if (imageFiles[baseIndex] === undefined) {
         await addPage(baseFilename + baseIndex, baseIndex);
     }
-    updatePage();
+    if (settings.pageMode == 1) {
+        updatePage();
+    }
+    else if (settings.pageMode == 2) {
+        var i = 1;
+        if (baseIndex + i <= Math.max(totalImages, imageFiles.length) && imageFiles[baseIndex + i] === undefined) {
+            await addPage(baseFilename + (baseIndex + i), (baseIndex + i));
+        }
+        nbPagesAfter++;
+        updatePage();
+    }
     for (i = 1; i <= nbPagesAfter; i++) {
         if (baseIndex + i <= Math.max(totalImages, imageFiles.length) && imageFiles[baseIndex + i] === undefined) {
             addPage(baseFilename + (baseIndex + i), (baseIndex + i)); // not awaited
@@ -693,7 +1031,7 @@ async function init() {
             showRightPage();
         },
     });
-    $("#mainImage").click(function (evt) {
+    $("#mainImageWrapper").click(function (evt) {
         // Firefox does not support offsetX/Y so we have to manually calculate
         // where the user clicked in the image.
         var mainContentWidth = $("#mainContent").width();
