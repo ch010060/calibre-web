@@ -203,58 +203,58 @@ function loadPageFromArrayBuffer(d, mimetype, filename, index = 0) {
                 "</a>" +
                 "</li>"
             );
-            totalImages++;
+            if (index + 1 > totalImages) {
+                totalImages = index + 1;
+            }
         }
-    } else {
-        totalImages--;
     }
 }
 
 
-function loadFromArrayBuffer(ab, lastCompletion = 0) {
-    const collator = new Intl.Collator('en', { numeric: true, sensitivity: 'base' });
-    loadArchiveFormats(['rar', 'zip', 'tar'], function () {
-        // Open the file as an archive
-        archiveOpenFile(ab, function (archive) {
-            if (archive) {
-                totalImages = archive.entries.length
-                console.info('Uncompressing ' + archive.archive_type + ' ...');
-                entries = archive.entries.sort((a, b) => collator.compare(a.name, b.name));
-                entries.forEach(function (e, i) {
-                    updateProgress((i + 1) / totalImages * 100);
-                    if (e.is_file) {
-                        e.readData(function (d) {
-                            // add any new pages based on the filename
-                            if (imageFilenames.indexOf(e.name) === -1) {
-                                let data = { filename: e.name, fileData: d };
-                                var test = new kthoom.ImageFile(data);
-                                if (test.mimeType !== undefined) {
-                                    imageFilenames.push(e.name);
-                                    imageFiles.push(test);
-                                    // add thumbnails to the TOC list
-                                    $("#thumbnails").append(
-                                        "<li>" +
-                                        "<a data-page='" + imageFiles.length + "'>" +
-                                        "<img src='" + imageFiles[imageFiles.length - 1].dataURI + "'/>" +
-                                        "<span>" + imageFiles.length + "</span>" +
-                                        "</a>" +
-                                        "</li>"
-                                    );
-                                    // display first page if we haven't yet
-                                    if (imageFiles.length === currentImage + 1) {
-                                        updatePage(lastCompletion);
-                                    }
-                                } else {
-                                    totalImages--;
-                                }
-                            }
-                        });
-                    }
-                });
-            }
-        });
-    });
-}
+// function loadFromArrayBuffer(ab, lastCompletion = 0) {
+//     const collator = new Intl.Collator('en', { numeric: true, sensitivity: 'base' });
+//     loadArchiveFormats(['rar', 'zip', 'tar'], function () {
+//         // Open the file as an archive
+//         archiveOpenFile(ab, function (archive) {
+//             if (archive) {
+//                 totalImages = archive.entries.length
+//                 console.info('Uncompressing ' + archive.archive_type + ' ...');
+//                 entries = archive.entries.sort((a, b) => collator.compare(a.name, b.name));
+//                 entries.forEach(function (e, i) {
+//                     updateProgress((i + 1) / totalImages * 100);
+//                     if (e.is_file) {
+//                         e.readData(function (d) {
+//                             // add any new pages based on the filename
+//                             if (imageFilenames.indexOf(e.name) === -1) {
+//                                 let data = { filename: e.name, fileData: d };
+//                                 var test = new kthoom.ImageFile(data);
+//                                 if (test.mimeType !== undefined) {
+//                                     imageFilenames.push(e.name);
+//                                     imageFiles.push(test);
+//                                     // add thumbnails to the TOC list
+//                                     $("#thumbnails").append(
+//                                         "<li>" +
+//                                         "<a data-page='" + imageFiles.length + "'>" +
+//                                         "<img src='" + imageFiles[imageFiles.length - 1].dataURI + "'/>" +
+//                                         "<span>" + imageFiles.length + "</span>" +
+//                                         "</a>" +
+//                                         "</li>"
+//                                     );
+//                                     // display first page if we haven't yet
+//                                     if (imageFiles.length === currentImage + 1) {
+//                                         updatePage(lastCompletion);
+//                                     }
+//                                 } else {
+//                                     totalImages--;
+//                                 }
+//                             }
+//                         });
+//                     }
+//                 });
+//             }
+//         });
+//     });
+// }
 
 function scrollTocToActive() {
     // Scroll to the thumbnail in the TOC on page change
@@ -440,10 +440,11 @@ function showPrevPage() {
         // Freeze on the current page.
         currentImage++;
     } else {
-        if (imageFiles[currentImage] === undefined) {
-            addPage(calibre.fetchPageUrl + currentImage, currentImage);
-        }
-        updatePage();
+        addPageRange(calibre.fetchPageUrl, currentImage, 2, 2);
+        // if (imageFiles[currentImage] === undefined) {
+        //     addPage(calibre.fetchPageUrl + currentImage, currentImage);
+        // }
+        // updatePage();
         if (settings.nextPage === 0) {
             $("#mainContent").scrollTop(0);
         }
@@ -456,10 +457,11 @@ function showNextPage() {
         // Freeze on the current page.
         currentImage--;
     } else {
-        if (imageFiles[currentImage] === undefined) {
-            addPage(calibre.fetchPageUrl + currentImage, currentImage);
-        }
-        updatePage();
+        addPageRange(calibre.fetchPageUrl, currentImage, 2, 2);
+        // if (imageFiles[currentImage] === undefined) {
+        //     addPage(calibre.fetchPageUrl + currentImage, currentImage);
+        // }
+        // updatePage();
         if (settings.nextPage === 0) {
             $("#mainContent").scrollTop(0);
         }
@@ -576,27 +578,36 @@ function keyHandler(evt) {
 
 async function addPage(filename, index) {
     var response = await fetch(filename);
-  //  var request = new XMLHttpRequest();
-   // request.open("GET", filename);
-   // request.responseType = "arraybuffer";
-   // request.addEventListener("load", function () {
-        if (response.status >= 200 && response.status < 300) {
+    if (response.status >= 200 && response.status < 300) {
 
-            loadPageFromArrayBuffer(await response.arrayBuffer(), response.headers.get("content-type"), filename, index);
-        } else {
-            console.warn(request.statusText, request.responseText);
+        loadPageFromArrayBuffer(await response.arrayBuffer(), response.headers.get("content-type"), filename, index);
+    } else {
+        console.warn(request.statusText, request.responseText);
+    }
+    // updatePage(currentImage);
+}
+
+async function addPageRange(baseFilename, baseIndex, nbPagesBefore, nbPagesAfter) {
+    if (imageFiles[baseIndex] === undefined) {
+        await addPage(baseFilename + baseIndex, baseIndex);
+    }
+    updatePage();
+    for (i = 1; i <= nbPagesAfter; i++) {
+        if (baseIndex + i <= Math.max(totalImages, imageFiles.length) && imageFiles[baseIndex + i] === undefined) {
+            addPage(baseFilename + (baseIndex + i), (baseIndex + i)); // not awaited
         }
-        updatePage(currentImage);
-   // });
-   // request.send();
+    }
+    for (i = 1; i <= nbPagesBefore; i++) {
+        if (baseIndex - i >= 0 && imageFiles[baseIndex - i] === undefined) {
+            addPage(baseFilename + (baseIndex - i), (baseIndex - i)); // not awaited
+        }
+    }
 
 }
 
 async function init() {
     var response = await fetch(calibre.statsUrl);
     var stats = await response.json();
-    console.log(stats);
-
     totalImages = stats?.page_count;
     initProgressClick();
     document.body.className += /AppleWebKit/.test(navigator.userAgent) ? " webkit" : "";
