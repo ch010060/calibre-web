@@ -238,3 +238,42 @@ th {
   -ms-overflow-style: none;  /* IE and Edge */
   scrollbar-width: none;  /* Firefox */
 }
+
+.mainImageWrapper{
+  display: flex;
+  justify-content: center;
+}
+
+.mainImageWrapper > div{
+  width: 100%;
+}
+.mainImageWrapper .image-left{
+  text-align: right;
+  /* box-shadow: -50px 0px 50px -51px rgba(0,0,0,0.66) inset;
+-webkit-box-shadow: -50px 0px 50px -51px rgba(0,0,0,0.66) inset;
+-moz-box-shadow: -50px 0px 50px -51px rgba(0,0,0,0.66) inset; */
+}
+.mainImageWrapper .image-right{
+  text-align: left;
+  /* box-shadow: 50px 0px 50px -51px rgba(0,0,0,0.66) inset;
+-webkit-box-shadow: 50px 0px 50px -51px rgba(0,0,0,0.66) inset;
+-moz-box-shadow: 50px 0px 50px -51px rgba(0,0,0,0.66) inset; */
+}
+
+.mainImageWrapper.isdouble > div{
+  text-align: center;
+  box-shadow: none;
+}
+/* 
+#mainImage{
+  box-shadow: -50px 0px 50px -51px rgba(0,0,0,0.66) inset;
+-webkit-box-shadow: -50px 0px 50px -51px rgba(0,0,0,0.66) inset;
+-moz-box-shadow: -50px 0px 50px -51px rgba(0,0,0,0.66) inset;
+}
+
+
+#mainImage2{
+  box-shadow: 50px 0px 50px -51px rgba(0,0,0,0.66) inset;
+-webkit-box-shadow: 50px 0px 50px -51px rgba(0,0,0,0.66) inset;
+-moz-box-shadow: 50px 0px 50px -51px rgba(0,0,0,0.66) inset;
+} */

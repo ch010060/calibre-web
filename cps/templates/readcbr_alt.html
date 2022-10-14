@@ -11,12 +11,14 @@
 
   <link rel="stylesheet" href="{{ url_for('static', filename='css/libs/normalize.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}" type="text/css" />
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/kthoom.css') }}" type="text/css" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/kthoom_v2.css') }}" type="text/css" />
 
   <script src="{{ url_for('static', filename='js/libs/jquery.min.js') }}"></script>
   <script src="{{ url_for('static', filename='js/libs/plugins.js') }}"></script>
   <script src="{{ url_for('static', filename='js/libs/screenfull.min.js') }}"></script>
   <script src="{{ url_for('static', filename='js/compress/uncompress.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/vibrant.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/inset.js') }}"></script>
   <script src="{{ url_for('static', filename='js/kthoom_v2.js') }}"></script>
 </head>
 
@@ -59,8 +61,12 @@
     <div id="mainContent" tabindex="-1">
       <div id="mainText" style="display:none"></div>
       <div class="mainImageWrapper">
-        <canvas id="mainImage"></canvas>
-        <canvas id="mainImage2"></canvas>
+        <div class="image-left" id="image-left">
+          <canvas id="mainImage"></canvas>
+        </div>
+        <div class="image-right" id="image-right">
+          <canvas id="mainImage2"></canvas>
+        </div>
       </div>
     </div>
     <div id="left" class="arrow" onclick="showLeftPage(); setBookmark();">‹</div>

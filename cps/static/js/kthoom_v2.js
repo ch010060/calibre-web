@@ -337,7 +337,9 @@ function updateProgress(loadPercentage) {
 }
 
 async function onePageRender() {
-    $("#mainImage2").hide();
+    $("#image-right").hide();
+    $(".mainImageWrapper").addClass("isdouble");
+
     // single page 
     await LoadImage1(currentImage);
     // var canvas = $("#mainImage")[0];
@@ -556,10 +558,54 @@ function LoadImage1(currentImage) {
                     scrollTo(0, 0);
                     x.drawImage(img, 0, 0);
 
+                    if (!currentPageIsDoublePage && settings.pageMode == 2){
+                    // draw shadow
+                    x.shadowBlur = 80;
+                    x.shadowColor = "#000000AA";
+                    x.fillRect(canvas.width , -50, 50, canvas.height + 100);
+                    }
+
+
+                    var blockSize = 1, // only visit every 5 pixels
+                        defaultRGB = { r: 255, g: 255, b: 255 }, // for non-supporting envs
+                        data,
+                        i = -4,
+                        length,
+                        rgb = { r: 0, g: 0, b: 0 },
+                        count = 0;
+
+                    var borderColor = defaultRGB;
+
+                    try {
+                        pixeldata = x.getImageData(0, 0, 10, 10);
+                        length = pixeldata.data.length;
+                        while ((i += blockSize * 4) < length) {
+                            ++count;
+                            rgb.r += pixeldata.data[i];
+                            rgb.g += pixeldata.data[i + 1];
+                            rgb.b += pixeldata.data[i + 2];
+                        }
+
+                        // ~~ used to floor values
+                        rgb.r = ~~(rgb.r / count);
+                        rgb.g = ~~(rgb.g / count);
+                        rgb.b = ~~(rgb.b / count);
+
+                        borderColor = rgb;
+
+                    } catch (e) {
+                        /* security error, img on diff domain *///alert('x');
+                        // return defaultRGB;
+                    }
+
                     updateScale(false);
 
                     canvas.style.display = "";
                     $("body").css("overflowY", "");
+
+                    $("#image-left").css("background-color", "rgb(" + borderColor.r + ", " + borderColor.g + ", " + borderColor.b + ")");
+
+
                     x.restore();
                     resolve();
                 };
@@ -568,6 +614,7 @@ function LoadImage1(currentImage) {
         }
     })
 }
+
 
 function LoadImage2(currentImage) {
     return new Promise((resolve, reject) => {
@@ -657,7 +704,8 @@ function LoadImage2(currentImage) {
 
                     if (currentPageIsDoublePage == true) {
                         // the second page is a double page, skip it.
-                        $("#mainImage2").hide();
+                        $("#image-right").hide();
+                        $(".mainImageWrapper").addClass("isdouble");
 
                         resolve();
                         return;
@@ -678,12 +726,53 @@ function LoadImage2(currentImage) {
                     }
                     canvas2.style.display = "none";
                     scrollTo(0, 0);
+
                     x2.drawImage(img2, 0, 0);
+
+                    // draw shadow
+                    x2.shadowBlur = 80;
+                    x2.shadowColor = "#000000AA";
+                    x2.fillRect(-50, -50, 50, canvas2.height + 100);
+
+                    var blockSize = 1, // only visit every 5 pixels
+                        defaultRGB = { r: 255, g: 255, b: 255 }, // for non-supporting envs
+                        i = -4,
+                        length,
+                        rgb = { r: 0, g: 0, b: 0 },
+                        count = 0;
+
+                    var borderColor = defaultRGB;
+
+                    try {
+                        pixeldata = x2.getImageData(sw - 10, 0, 10, 10);
+                        length = pixeldata.data.length;
+                        while ((i += blockSize * 4) < length) {
+                            ++count;
+                            rgb.r += pixeldata.data[i];
+                            rgb.g += pixeldata.data[i + 1];
+                            rgb.b += pixeldata.data[i + 2];
+                        }
+
+                        // ~~ used to floor values
+                        rgb.r = ~~(rgb.r / count);
+                        rgb.g = ~~(rgb.g / count);
+                        rgb.b = ~~(rgb.b / count);
+
+                        borderColor = rgb;
+
+                    } catch (e) {
+                        /* security error, img on diff domain *///alert('x');
+                        // return defaultRGB;
+                    }
+
 
                     updateScale(false);
 
                     canvas2.style.display = "";
                     $("body").css("overflowY", "");
+                    $("#image-right").css("background-color", "rgb(" + borderColor.r + ", " + borderColor.g + ", " + borderColor.b + ")");
+
+
                     x2.restore();
                     resolve();
                 };
@@ -695,14 +784,18 @@ function LoadImage2(currentImage) {
 
 async function twoPagesRender(currentImage) {
 
-    $("#mainImage2").show();
+    $("#image-right").show();
+    $(".mainImageWrapper").removeClass("isdouble");
+
     // double page 
     await LoadImage1(currentImage);
 
 
     if (currentPageIsDoublePage == true) {
         // the first page is a double page, skip the next page
-        $("#mainImage2").hide();
+        $("#image-right").hide();
+        $(".mainImageWrapper").addClass("isdouble");
+
         return;
     }
 
