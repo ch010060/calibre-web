@@ -11,226 +11,226 @@
 
   <link rel="stylesheet" href="{{ url_for('static', filename='css/libs/normalize.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}" type="text/css" />
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/kthoom_v2.css') }}" type="text/css" />
+  <!-- <link rel="stylesheet" href="{{ url_for('static', filename='css/kthoom_v2.css') }}" type="text/css" /> -->
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/fontello/css/fontello.css') }}" type="text/css" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/comics.css') }}" type="text/css" />
 
   <script src="{{ url_for('static', filename='js/libs/jquery.min.js') }}"></script>
   <script src="{{ url_for('static', filename='js/libs/plugins.js') }}"></script>
   <script src="{{ url_for('static', filename='js/libs/screenfull.min.js') }}"></script>
   <script src="{{ url_for('static', filename='js/compress/uncompress.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/vibrant.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/inset.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/kthoom_v2.js') }}"></script>
+  <!-- <script src="{{ url_for('static', filename='js/vibrant.js') }}"></script> -->
+  <!-- <script src="{{ url_for('static', filename='js/inset.js') }}"></script> -->
+  <script src="{{ url_for('static', filename='js/comics.js') }}"></script>
 </head>
 
 <body>
-  <div id="sidebar">
-    <div id="tocView" class="view" tabindex="-1">
-      <ul id="thumbnails"></ul>
-    </div>
-    <div id="bookmarksView" class="view">
-      <ul id="bookmarks"></ul>
-    </div>
+  <div class="my-comics-reader">
   </div>
 
-  <div id="main" class="main">
-    <div id="titlebar" class="main">
-      <div id="opener">
-        <a id="slider" class="icon-menu">Menu</a>
-      </div>
-      <div id="metainfo">
-        <span id="book-title">{{ title | shortentitle }}</span>
-        <span id="title-seperator">&nbsp;&nbsp;–&nbsp;&nbsp;</span>
-        <span id="chapter-title"></span>
-      </div>
-      <div id="title-controls">
-        <a id="setting" class="icon-cog">Settings</a>
-        <a id="fullscreen" class="icon-resize-full">Fullscreen</a>
-      </div>
-      <div id="progress" role="progressbar" class="loading">
-        <div class="bar-load from-left">
-          <div class="text load">
-            Loading...
+
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+  <template id="preferences-modal">
+
+    <div class="modal md-effect-1">
+      <div class="md-content">
+        <h3>{{_('Settings')}}</h3>
+        <div>
+          <div class="settings-column">
+            <table>
+              <thead>
+                <tr>
+                  <th colspan="2">{{_('Keyboard Shortcuts')}}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td id="prev_page_key">&larr;<br />
+                    &#8679; &#9141;</td>
+                  <td>{{_('Previous Page')}}</td>
+                </tr>
+                <tr>
+                  <td id="next_page_key">&rarr;<br />
+                    &#9141;</td>
+                  </td>
+                  <td>{{_('Next Page')}}</td>
+                </tr>
+                <tr>
+                  <td>B</td>
+                  <td>{{_('Scale to Best')}}</td>
+                </tr>
+                <tr>
+                  <td>W</td>
+                  <td>{{_('Scale to Width')}}</td>
+                </tr>
+                <tr>
+                  <td>H</td>
+                  <td>{{_('Scale to Height')}}</td>
+                </tr>
+                <tr>
+                  <td>N</td>
+                  <td>{{_('Scale to Native')}}</td>
+                </tr>
+                <tr>
+                  <td>R</td>
+                  <td>{{_('Rotate Right')}}</td>
+                </tr>
+                <tr>
+                  <td>L</td>
+                  <td>{{_('Rotate Left')}}</td>
+                </tr>
+                <tr>
+                  <td>F</td>
+                  <td>{{_('Flip Image')}}</td>
+                </tr>
+                <tr>
+                  <td>D</td>
+                  <td>{{_('Change Direction')}}</td>
+                </tr>
+                <tr>
+                  <td>1</td>
+                  <td>{{_('Single Page Mode')}}</td>
+                </tr>
+                <tr>
+                  <td>2</td>
+                  <td>{{_('Double Page Mode')}}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="settings-column">
+            <table id="settings">
+              <thead>
+                <tr>
+                  <th>{{_('Settings')}}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th>{{_('Theme')}}:</th>
+                  <td>
+                    <div class="inputs">
+                      <label for="lightTheme"><input type="radio" id="lightTheme" name="theme" value="light" />
+                        {{_('Light')}}</label>
+                      <label for="darkTheme"><input type="radio" id="darkTheme" name="theme" value="dark" />
+                        {{_('Dark')}}</label>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <th>{{_('Scale')}}:</th>
+                  <td>
+                    <div class="inputs">
+                      <label for="fitBest"><input type="radio" id="fitBest" name="fitMode" value="66" />
+                        {{_('Best')}}</label>
+                      <label for="fitWidth"><input type="radio" id="fitWidth" name="fitMode" value="87" />
+                        {{_('Width')}}</label>
+                      <label for="fitHeight"><input type="radio" id="fitHeight" name="fitMode" value="72" />
+                        {{_('Height')}}</label>
+                      <label for="fitNative"><input type="radio" id="fitNative" name="fitMode" value="78" />
+                        {{_('Native')}}</label>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <th>{{_('Rotate')}}:</th>
+                  <td>
+                    <div class="inputs">
+                      <label for="r0"><input type="radio" id="r0" name="rotateTimes" value="0" /> 0&deg;</label>
+                      <label for="r90"><input type="radio" id="r90" name="rotateTimes" value="1" /> 90&deg;</label>
+                      <label for="r180"><input type="radio" id="r180" name="rotateTimes" value="2" /> 180&deg;</label>
+                      <label for="r270"><input type="radio" id="r270" name="rotateTimes" value="3" /> 270&deg;</label>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <th>{{_('Flip')}}:</th>
+                  <td>
+                    <div class="inputs">
+                      <label for="vflip"><input type="checkbox" id="vflip" name="vflip" /> {{_('Horizontal')}}</label>
+                      <label for="hflip"><input type="checkbox" id="hflip" name="hflip" /> {{_('Vertical')}}</label>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <th>{{_('Direction')}}:</th>
+                  <td>
+                    <div class="inputs">
+                      <label for="leftToRight"><input type="radio" id="leftToRight" name="direction" value="0" />
+                        {{_('Left to Right')}}</label>
+                      <label for="rightToLeft"><input type="radio" id="rightToLeft" name="direction" value="1" />
+                        {{_('Right to Left')}}</label>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <th>{{_('Next Page')}}:</th>
+                  <td>
+                    <div class="inputs">
+                      <label for="resetToTop"><input type="radio" id="resetToTop" name="nextPage" value="0" />
+                        {{_('Reset to Top')}}</label>
+                      <label for="rememberPosition"><input type="radio" id="rememberPosition" name="nextPage"
+                          value="1" /> {{_('Remember Position')}}</label>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <th>{{_('Scrollbar')}}:</th>
+                  <td>
+                    <div class="inputs">
+                      <label for="showScrollbar"><input type="radio" id="showScrollbar" name="scrollbar" value="1" />
+                        {{_('Show')}}</label>
+                      <label for="hideScrollbar"><input type="radio" id="hideScrollbar" name="scrollbar" value="0" />
+                        {{_('Hide')}}</label>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <th>{{_('Page Mode')}}:</th>
+                  <td>
+                    <div class="inputs">
+                      <label for="singlePageMode"><input type="radio" id="singlePageMode" name="pageMode" value="1" />
+                        {{_('Single Page')}}</label>
+                      <label for="doublePageMode"><input type="radio" id="doublePageMode" name="pageMode" value="2" />
+                        {{_('Double Page')}}</label>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <th>{{_('Page Preload')}}:</th>
+                  <td>
+                    <div class="inputs">
+                      <label for="preloadPageNb">
+                        {{_('Number of preloaded pages (X before and X after)')}}</label>
+                      <input type="number" id="preloadPageNb" name="preloadPageNb" value="0" />
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
-        <div class="bar-read from-left">
-          <div class="text page"></div>
-        </div>
+        <div class="closer icon-cancel-circled"></div>
       </div>
     </div>
+    <div class="overlay"></div>
+  </template>
 
-    <div id="mainContent" tabindex="-1">
-      <div id="mainText" style="display:none"></div>
-      <div class="mainImageWrapper">
-        <div class="image-left" id="image-left">
-          <canvas id="mainImage"></canvas>
-        </div>
-        <div class="image-right" id="image-right">
-          <canvas id="mainImage2"></canvas>
-        </div>
-      </div>
-    </div>
-    <div id="left" class="arrow" onclick="showLeftPage(); setBookmark();">‹</div>
-    <div id="right" class="arrow" onclick="showRightPage(); setBookmark();">›</div>
-  </div>
+  <script>
+    $().ready(() => {
+      $(".my-comics-reader").comicsreader({
+        bookInfoUrl: "{{ url_for('web.serve_book_info', book_id=comicfile, book_format=extension) }}",
+        bookmark: {{ bookmark.bookmark_key if bookmark != None }},
+      useBookmarks: {{ g.user.is_authenticated | lower }},
+      fetchPageUrl: "{{ url_for('web.serve_book_page', book_id=comicfile, book_format=extension, page_id=0) }}",
+      bookTitle: "{{ title | shortentitle }}"
+      });
+    });
+  </script>
 
-  <div class="modal md-effect-1" id="settings-modal">
-    <div class="md-content">
-      <h3>{{_('Settings')}}</h3>
-      <div>
-        <div class="settings-column">
-          <table>
-            <thead>
-              <tr>
-                <th colspan="2">{{_('Keyboard Shortcuts')}}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td id="prev_page_key">&larr;</td>
-                <td>{{_('Previous Page')}}</td>
-              </tr>
-              <tr>
-                <td id="next_page_key">&rarr;</td>
-                <td>{{_('Next Page')}}</td>
-              </tr>
-              <tr>
-                <td>B</td>
-                <td>{{_('Scale to Best')}}</td>
-              </tr>
-              <tr>
-                <td>W</td>
-                <td>{{_('Scale to Width')}}</td>
-              </tr>
-              <tr>
-                <td>H</td>
-                <td>{{_('Scale to Height')}}</td>
-              </tr>
-              <tr>
-                <td>N</td>
-                <td>{{_('Scale to Native')}}</td>
-              </tr>
-              <tr>
-                <td>R</td>
-                <td>{{_('Rotate Right')}}</td>
-              </tr>
-              <tr>
-                <td>L</td>
-                <td>{{_('Rotate Left')}}</td>
-              </tr>
-              <tr>
-                <td>F</td>
-                <td>{{_('Flip Image')}}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div class="settings-column">
-          <table id="settings">
-            <thead>
-              <tr>
-                <th>{{_('Settings')}}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <th>{{_('Theme')}}:</th>
-                <td>
-                  <div class="inputs">
-                    <label for="lightTheme"><input type="radio" id="lightTheme" name="theme" value="light" />
-                      {{_('Light')}}</label>
-                    <label for="darkTheme"><input type="radio" id="darkTheme" name="theme" value="dark" />
-                      {{_('Dark')}}</label>
-                  </div>
-                </td>
-              </tr>
-              <tr>
-                <th>{{_('Scale')}}:</th>
-                <td>
-                  <div class="inputs">
-                    <label for="fitBest"><input type="radio" id="fitBest" name="fitMode" value="66" />
-                      {{_('Best')}}</label>
-                    <label for="fitWidth"><input type="radio" id="fitWidth" name="fitMode" value="87" />
-                      {{_('Width')}}</label>
-                    <label for="fitHeight"><input type="radio" id="fitHeight" name="fitMode" value="72" />
-                      {{_('Height')}}</label>
-                    <label for="fitNative"><input type="radio" id="fitNative" name="fitMode" value="78" />
-                      {{_('Native')}}</label>
-                  </div>
-                </td>
-              </tr>
-              <tr>
-                <th>{{_('Rotate')}}:</th>
-                <td>
-                  <div class="inputs">
-                    <label for="r0"><input type="radio" id="r0" name="rotateTimes" value="0" /> 0&deg;</label>
-                    <label for="r90"><input type="radio" id="r90" name="rotateTimes" value="1" /> 90&deg;</label>
-                    <label for="r180"><input type="radio" id="r180" name="rotateTimes" value="2" /> 180&deg;</label>
-                    <label for="r270"><input type="radio" id="r270" name="rotateTimes" value="3" /> 270&deg;</label>
-                  </div>
-                </td>
-              </tr>
-              <tr>
-                <th>{{_('Flip')}}:</th>
-                <td>
-                  <div class="inputs">
-                    <label for="vflip"><input type="checkbox" id="vflip" name="vflip" /> {{_('Horizontal')}}</label>
-                    <label for="hflip"><input type="checkbox" id="hflip" name="hflip" /> {{_('Vertical')}}</label>
-                  </div>
-                </td>
-              </tr>
-              <tr>
-                <th>{{_('Direction')}}:</th>
-                <td>
-                  <div class="inputs">
-                    <label for="leftToRight"><input type="radio" id="leftToRight" name="direction" value="0" />
-                      {{_('Left to Right')}}</label>
-                    <label for="rightToLeft"><input type="radio" id="rightToLeft" name="direction" value="1" />
-                      {{_('Right to Left')}}</label>
-                  </div>
-                </td>
-              </tr>
-              <tr>
-                <th>{{_('Next Page')}}:</th>
-                <td>
-                  <div class="inputs">
-                    <label for="resetToTop"><input type="radio" id="resetToTop" name="nextPage" value="0" /> {{_('Reset
-                      to Top')}}</label>
-                    <label for="rememberPosition"><input type="radio" id="rememberPosition" name="nextPage" value="1" />
-                      {{_('Remember Position')}}</label>
-                  </div>
-                </td>
-              </tr>
-              <tr>
-                <th>{{_('Scrollbar')}}:</th>
-                <td>
-                  <div class="inputs">
-                    <label for="showScrollbar"><input type="radio" id="showScrollbar" name="scrollbar" value="1" />
-                      {{_('Show')}}</label>
-                    <label for="hideScrollbar"><input type="radio" id="hideScrollbar" name="scrollbar" value="0" />
-                      {{_('Hide')}}</label>
-                  </div>
-                </td>
-              </tr>
-              <tr>
-                <th>{{_('Page Mode')}}:</th>
-                <td>
-                  <div class="inputs">
-                    <label for="1PageMode"><input type="radio" id="1PageMode" name="pageMode" value="1" />
-                      {{_('1 Page')}}</label>
-                    <label for="2PageMode"><input type="radio" id="2PageMode" name="pageMode" value="2" />
-                      {{_('2 Pages')}}</label>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-      <div class="closer icon-cancel-circled"></div>
-    </div>
-  </div>
-  <div class="overlay"></div>
-  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
   <script>
     var updateArrows = function () {
       if ($('input[name="direction"]:checked').val() === "0") {
@@ -243,6 +243,8 @@
     };
   </script>
   <script>
+
+
     function setBookmark() {
       // get csrf_token
       let csrf_token = $("input[name='csrf_token']").val();
@@ -264,8 +266,8 @@
       bookUrl: "{{ url_for('static', filename=comicfile) }}/",
       bookmarkUrl: "{{ url_for('web.set_bookmark', book_id=comicfile, book_format=extension.upper()) }}",
       bookmark: "{{ bookmark.bookmark_key if bookmark != None }}",
-      useBookmarks: "{{ g.user.is_authenticated | tojson }}",
-      fetchPageUrl: "{{ url_for('web.serve_book_page', book_id=comicfile, book_format=extension, page_id=0) }}",
+      useBookmarks: {{ g.user.is_authenticated | lower }},
+    fetchPageUrl: "{{ url_for('web.serve_book_page', book_id=comicfile, book_format=extension, page_id=0) }}",
       statsUrl: "{{ url_for('web.serve_book_stats', book_id=comicfile, book_format=extension) }}"
     };
 
@@ -276,13 +278,13 @@
       }
     }
 
-    document.onreadystatechange = function () {
-      if (document.readyState == "complete") {
-        init();
-        addPageRange(calibre.fetchPageUrl, currentImage, 2, 2);
-        updateArrows();
-      }
-    }
+    // document.onreadystatechange = function () {
+    //   if (document.readyState == "complete") {
+    //     init();
+    //     addPageRange(calibre.fetchPageUrl, currentImage, 2, 2);
+    //     updateArrows();
+    //   }
+    // }
   </script>
   <script>
     $('input[name="direction"]').change(function () {
@@ -290,5 +292,6 @@
     });
   </script>
 </body>
+
 
 </html>

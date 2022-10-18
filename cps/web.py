@@ -18,6 +18,7 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+from inspect import isclass
 import os
 import json
 import mimetypes
@@ -27,6 +28,7 @@ import copy
 from flask import Blueprint, jsonify
 from flask import request, redirect, send_from_directory, make_response, flash, abort, url_for
 from flask import session as flask_session
+from flask_api import status
 from flask_babel import gettext as _
 from flask_babel import get_locale
 from flask_login import login_user, logout_user, login_required, current_user
@@ -1219,6 +1221,51 @@ def serve_book_stats(book_id, book_format, anyname):
                             book_format,
                             config.config_rarfile_location)
         return jsonify(book_id=data.book, name=data.name, uncompressed_size=data.uncompressed_size, format = data.format, page_count = meta.page_count )
+
+
+@web.route("/bookinfo/<int:book_id>/<book_format>")
+@login_required_if_no_ano
+@viewer_required
+def serve_book_info(book_id, book_format):
+    book = calibre_db.get_book(book_id)
+    data = calibre_db.get_book_format(book_id, book_format.upper())
+    if not book or not data:
+        return "File not in Database", status.HTTP_400_BAD_REQUEST
+    if config.config_use_google_drive:
+        return "Only Local files supported", status.HTTP_400_BAD_REQUEST
+    elif not use_comic_meta:
+        return "ComicApi not installed", status.HTTP_400_BAD_REQUEST
+    else:
+        meta = comic.get_comic_info(os.path.join(config.config_calibre_dir, book.path, data.name + "." + book_format),
+                            data.name,
+                            book_format,
+                            config.config_rarfile_location)
+        return jsonify(
+                id=book.id, 
+                author_list=authors_to_dict(book.authors),
+                publisher_list=publishers_to_dict(book.publishers),
+                title=book.title,
+                has_cover=book.has_cover,
+                format = data.format, 
+                uncompressed_size=data.uncompressed_size, 
+                description= meta.description,
+                page_count = meta.page_count,
+                bookmark_url= url_for('web.set_bookmark', book_id=book_id, book_format=book_format.upper()),
+                page_url= url_for('web.serve_book_page', book_id=book_id, book_format=book_format.upper(), page_id=0)[:-1]
+                )
+
+def authors_to_dict(authors):
+    dicts = []
+    for author in authors:
+        dicts.append({"name": author.name, "link":author.link, "id": author.id})
+    return dicts
+
+def publishers_to_dict(publishers):
+    dicts = []
+    for publisher in publishers:
+        dicts.append({"name": publisher.name, "id": publisher.id})
+    return dicts
+
 
 @web.route("/download/<int:book_id>/<book_format>", defaults={'anyname': 'None'})
 @web.route("/download/<int:book_id>/<book_format>/<anyname>")

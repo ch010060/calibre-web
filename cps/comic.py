@@ -129,11 +129,11 @@ def get_comic_info(tmp_file_path, original_file_name, original_file_extension, r
                                    for credit in loaded_metadata.credits if credit["role"] == "Writer"]) or 'Unknown',
                 cover=_extract_cover(tmp_file_path, original_file_extension, rar_executable),
                 description=loaded_metadata.comments or "",
-                tags="",
+                tags=loaded_metadata.tags or "",
                 series=loaded_metadata.series or "",
                 series_id=loaded_metadata.issue or "",
                 languages=loaded_metadata.language,
-                publisher="",
+                publisher=loaded_metadata.publisher or "",
                 pubdate="",
                 identifiers=[],
                 page_count=loaded_metadata.pageCount
