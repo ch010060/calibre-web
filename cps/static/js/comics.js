@@ -482,9 +482,6 @@ if (window.opera) {
 
         },
         renderSinglePage: function () {
-
-
-
             let preferences = this.preferences;
             let pageInfo = this.pageInfo[this.currentPage];
             let renderView = this.$elem.find(".render-view");
@@ -508,13 +505,6 @@ if (window.opera) {
                 self.applyRenderScale();
                 resolve();
             });
-
-
-
-
-
-
-
         },
         renderDoublePage: function () {
 
@@ -555,7 +545,7 @@ if (window.opera) {
                         gradient.addColorStop(.5, "#00000088");
                         gradient.addColorStop(.53, "#00000066");
                         gradient.addColorStop(.62, "#00000044");
-                        gradient.addColorStop(1, "#00000000"); 
+                        gradient.addColorStop(1, "#00000000");
 
                         // Fill with gradient
                         context.fillStyle = gradient;
@@ -610,8 +600,6 @@ if (window.opera) {
                 self.applyRenderScale();
                 resolve();
             });
-
-
         },
         renderPageCanvas: function (pageIndex) {
             var canvas = document.createElement('canvas');
@@ -799,20 +787,25 @@ if (window.opera) {
             var pageList = this.$elem.find(".pages-list");
             pageList.html("");
 
+            var sideClass = "page-left";
             for (let i = 0; i < this.pageInfo.length; i++) {
                 if (this.pageInfo[i]) {
                     var dblClass = "is-single-page";
                     if (this.pageInfo[i] && this.pageInfo[i].isDoublePage(this.preferences.forceRotationDetection ? this.preferences.rotateTimes : 0) ||
                         this.pageInfo[i + 1] && this.pageInfo[i + 1].isDoublePage(this.preferences.forceRotationDetection ? this.preferences.rotateTimes : 0)) {
-                        var dblClass = "is-double-page";
+                        dblClass = "is-double-page";
+                        sideClass = "page-left";
                     }
                     pageList.append(
-                        `<section class="page-thumbnail ${dblClass}">` +
+                        `<section class="page-thumbnail ${dblClass} ${sideClass}">` +
                         `<a data-page-nb="${this.pageInfo[i].id}">` +
                         `<img src="${this.pageInfo[i].blobUrl}" alt="page ${this.pageInfo[i].id}" />` +
                         `<span>${this.pageInfo[i].id}</span>` +
                         '</section>'
                     );
+                    if (dblClass != "is-double-page") {
+                        sideClass = sideClass == "page-left" ? "page-right" : "page-left";
+                    }
                 }
             }
         },

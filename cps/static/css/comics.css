@@ -83,11 +83,11 @@ body.disabled-scrollbar::-webkit-scrollbar {
 .comics-reader-app .sidebar .pages-list.double-view .page-thumbnail.is-single-page {
   width: 50%;
 }
-.comics-reader-app .sidebar .pages-list.double-view .page-thumbnail.is-single-page:nth-child(odd) a {
+.comics-reader-app .sidebar .pages-list.double-view .page-thumbnail.is-single-page.page-left a {
   padding-right: 0;
   margin-left: 7.5px;
 }
-.comics-reader-app .sidebar .pages-list.double-view .page-thumbnail.is-single-page:nth-child(even) a {
+.comics-reader-app .sidebar .pages-list.double-view .page-thumbnail.is-single-page.page-right a {
   padding-left: 0;
   margin-right: 7.5px;
 }

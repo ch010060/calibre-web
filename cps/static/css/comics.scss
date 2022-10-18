@@ -92,19 +92,18 @@ body {
                     &.is-single-page {
                         width: 50%;
 
-                        &:nth-child(odd) {
+                        &.page-left {
                             a {
-
                                 padding-right: 0;
                                 margin-left: calc(15px/2);
-
                             }
                         }
 
-                        &:nth-child(even) a {
-
-                            padding-left: 0;
-                            margin-right: calc(15px/2);
+                        &.page-right {
+                            a {
+                                padding-left: 0;
+                                margin-right: calc(15px/2);
+                            }
                         }
                     }
 
@@ -149,8 +148,6 @@ body {
 
                 }
             }
-
-
 
             .menu-button {
 
