@@ -63,12 +63,6 @@ if (window.opera) {
                 throw ("ComicsReader: bookInfoUrl not set in options.");
             }
 
-            if (!this.options.settingsText) {
-                this.options.settingsText = "Settings";
-            }
-
-
-
             this.$elem = this.$element;
             // access settings with this.options...
             this.$elem.addClass(this.options.mainClassName).addClass("comics-reader-app");
@@ -99,7 +93,12 @@ if (window.opera) {
                 this.preferences.pageMode = 1;
             if (!this.preferences.preloadPageNb)
                 this.preferences.preloadPageNb = 2;
-
+            if (!this.preferences.forceRotationDetection)
+                this.preferences.forceRotationDetection = 0;
+            if (!this.preferences.autoBackground)
+                this.preferences.autoBackground = 0;
+            if (!this.preferences.pageShadow)
+                this.preferences.pageShadow = 0;
 
             // build initial DOM
             this.initDom();
@@ -123,7 +122,8 @@ if (window.opera) {
 
                 this.useBookmarks = false;
                 this.currentPage = 0;
-                if (this.bookmarkUrl && this.options.useBookmarks == true) {
+                if (this.bookmarkUrl && this.options.useBookmarks == true && this.options.csrfToken) {
+                    this.csrfToken = this.options.csrfToken;
                     this.useBookmarks = true;
                     this.currentPage = parseInt(this.options.bookmark);
                 }
@@ -383,6 +383,76 @@ if (window.opera) {
             this.renderPage();
 
         },
+        bookmarkPage: function () {
+            if (this.useBookmarks) {
+                //This sends a bookmark update to calibreweb.
+                $.ajax(this.bookmarkUrl, {
+                    method: "post",
+                    data: {
+                        csrf_token: this.csrfToken,
+                        bookmark: this.currentPage
+                    }
+                }).fail(function (xhr, status, error) {
+                    console.error(error);
+                });
+            }
+        },
+        getColorKey: function (self, canvas, left = true) {
+            if (self.preferences.autoBackground) {
+                var blockSize = 1, // only visit every 5 pixels
+                    defaultRGB = { r: 255, g: 255, b: 255 }, // for non-supporting envs
+                    i = -4,
+                    length,
+                    rgb = { r: 0, g: 0, b: 0 },
+                    count = 0;
+
+                var context = canvas.getContext("2d");
+                var borderColor = defaultRGB;
+
+                var countWhite = 0;
+                var countBlack = 0;
+                try {
+                    var pixeldata = left ? context.getImageData(0, 0, 5, canvas.height) : context.getImageData(canvas.width - 5, 0, 5, canvas.height);
+                    length = pixeldata.data.length;
+                    while ((i += blockSize * 4) < length) {
+                        ++count;
+                        if (pixeldata.data[i] < 20 && pixeldata.data[i + 1] < 20 && pixeldata.data[i + 2] < 20)
+                            countBlack++;
+
+                        if (pixeldata.data[i] > 235 && pixeldata.data[i + 1] > 235 && pixeldata.data[i + 2] > 235)
+                            countWhite++;
+
+                        rgb.r += pixeldata.data[i];
+                        rgb.g += pixeldata.data[i + 1];
+                        rgb.b += pixeldata.data[i + 2];
+                    }
+
+                    // ~~ used to floor values
+                    rgb.r = ~~(rgb.r / count);
+                    rgb.g = ~~(rgb.g / count);
+                    rgb.b = ~~(rgb.b / count);
+
+                    if (countBlack > countWhite && countBlack > count / 3) {
+                        borderColor = { r: 0, g: 0, b: 0 };
+                    }
+                    else if (countWhite > countBlack && countWhite > count / 3) {
+                        borderColor = { r: 255, g: 255, b: 255 };
+                    }
+                    else {
+                        borderColor = rgb;
+                    }
+
+                    return borderColor;
+
+                } catch (e) {
+                    console.error(e);
+                    /* security error, img on diff domain *///alert('x');
+                    // return defaultRGB;
+                }
+            }
+            return undefined;
+
+        },
         renderPage: function () {
 
             if (this.preferences.nextPage === 0) {
@@ -391,13 +461,16 @@ if (window.opera) {
             } else {
                 this.lastScrollPosition = $(document).scrollTop();
             }
+            this.$elem.find(".page-view").css("background", null);
             // render the page/pages based on the render mode
             if (this.preferences.pageMode == 1) {
+                this.$elem.find(".sidebar .pages-list").removeClass("double-view");
                 this.renderSinglePage();
             }
             else if (this.preferences.pageMode == 2) {
-                if (this.pageInfo[this.currentPage].isDoublePage ||
-                    this.pageInfo[this.currentPage + 1].isDoublePage) {
+                this.$elem.find(".sidebar .pages-list").addClass("double-view");
+                if (this.pageInfo[this.currentPage].isDoublePage(this.preferences.forceRotationDetection ? this.preferences.rotateTimes : 0) ||
+                    this.pageInfo[this.currentPage + 1].isDoublePage(this.preferences.forceRotationDetection ? this.preferences.rotateTimes : 0)) {
                     this.renderSinglePage();
                 }
                 else {
@@ -405,282 +478,13 @@ if (window.opera) {
                 }
             }
 
+            this.bookmarkPage();
 
         },
         renderSinglePage: function () {
-            var canvas = document.createElement('canvas');
-            var context = canvas.getContext("2d");
-            let preferences = this.preferences;
-            let pageInfo = this.pageInfo[this.currentPage];
-            let renderView = this.$elem.find(".render-view");
-            let lastScrollPosition = this.preferences.nextPage !== 0 ? this.lastScrollPosition : undefined;
-            let self = this;
-            return new Promise((resolve, reject) => {
-
-                var img = new Image();
-                // img.onerror = function (){
-
-                // };
-                img.onload = function () {
-                    var h = img.height,
-                        w = img.width,
-                        sw = w,
-                        sh = h;
-
-                    // handle rotation
-                    context.save();
-                    if (preferences.rotateTimes % 2 === 1) {
-                        sh = w;
-                        sw = h;
-                    }
-                    canvas.height = sh;
-                    canvas.width = sw;
-                    context.translate(sw / 2, sh / 2);
-                    context.rotate(Math.PI / 2 * preferences.rotateTimes);
-                    context.translate(-w / 2, -h / 2);
-
-                    // handle flips
-                    if (preferences.vflip) {
-                        context.scale(1, -1);
-                        context.translate(0, -h);
-                    }
-                    if (preferences.hflip) {
-                        context.scale(-1, 1);
-                        context.translate(-w, 0);
-                    }
-
-                    // canvas.style.display = "none";
-                    // scrollTo(0, 0);
-                    context.drawImage(img, 0, 0);
-
-                    // if (!currentPageIsDoublePage && settings.pageMode == 2) {
-                    //     // draw shadow
-                    //     x.shadowBlur = 80;
-                    //     x.shadowColor = "#000000AA";
-                    //     x.fillRect(canvas.width, -50, 50, canvas.height + 100);
-                    // }
 
 
-                    // var blockSize = 1, // only visit every 5 pixels
-                    //     defaultRGB = { r: 255, g: 255, b: 255 }, // for non-supporting envs
-                    //     data,
-                    //     i = -4,
-                    //     length,
-                    //     rgb = { r: 0, g: 0, b: 0 },
-                    //     count = 0;
 
-                    // var borderColor = defaultRGB;
-
-                    // try {
-                    //     pixeldata = x.getImageData(0, 0, 10, 10);
-                    //     length = pixeldata.data.length;
-                    //     while ((i += blockSize * 4) < length) {
-                    //         ++count;
-                    //         rgb.r += pixeldata.data[i];
-                    //         rgb.g += pixeldata.data[i + 1];
-                    //         rgb.b += pixeldata.data[i + 2];
-                    //     }
-
-                    //     // ~~ used to floor values
-                    //     rgb.r = ~~(rgb.r / count);
-                    //     rgb.g = ~~(rgb.g / count);
-                    //     rgb.b = ~~(rgb.b / count);
-
-                    //     borderColor = rgb;
-
-                    // } catch (e) {
-                    //     /* security error, img on diff domain *///alert('x');
-                    //     // return defaultRGB;
-                    // }
-
-
-                    //apply scaling
-                    //   updateScale(false);
-
-                    // canvas.style.display = "";
-                    //$("body").css("overflowY", "");
-
-                    // $("#image-left").css("background-color", "rgb(" + borderColor.r + ", " + borderColor.g + ", " + borderColor.b + ")");
-
-
-                    renderView.html("");
-                    renderView.append(canvas);
-
-                    if (lastScrollPosition !== undefined) {
-                        $(document).scrollTop(lastScrollPosition);
-                    }
-
-                    self.applyRenderScale();
-                    context.restore();
-                    resolve();
-
-                }
-
-                img.src = this.pageInfo[this.currentPage].blobUrl;
-
-            });
-            // scroll top
-            if ($("body").css("scrollHeight") / innerHeight > 1) {
-                $("body").css("overflowY", "scroll");
-            }
-
-
-            // page 1
-            var canvas = $("#mainImage")[0];
-            var x = $("#mainImage")[0].getContext("2d");
-            $("#mainText").hide();
-
-            if (currentImage === "loading") {
-                updateScale(true);
-                canvas.width = innerWidth / 2 - 100;
-                canvas.height = 200;
-                x.fillStyle = "black";
-                x.textAlign = "center";
-                x.font = "24px sans-serif";
-                x.strokeStyle = "black";
-                x.fillText("Loading Page #" + (currentImage + 1), canvas.width / 2, 100);
-            } else {
-                if (currentImage === "error") {
-                    updateScale(true);
-                    canvas.width = innerWidth / 2 - 100;
-                    canvas.height = 200;
-                    x.fillStyle = "black";
-                    x.textAlign = "center";
-                    x.font = "24px sans-serif";
-                    x.strokeStyle = "black";
-                    x.fillText("Unable to decompress image #" + (currentImage + 1), canvas.width / 2, 100);
-                } else {
-                    // scroll top
-                    if ($("body").css("scrollHeight") / innerHeight > 1) {
-                        $("body").css("overflowY", "scroll");
-                    }
-
-                    var img = new Image();
-                    var url = imageFiles[currentImage].dataURI
-                    img.onerror = function () {
-                        canvas.width = innerWidth / 2 - 100;
-                        canvas.height = 300;
-                        updateScale(true);
-                        x.fillStyle = "black";
-                        x.font = "50px sans-serif";
-                        x.strokeStyle = "black";
-                        x.fillText("Page #" + (currentImage + 1) + " (" +
-                            imageFiles[currentImage].filename + ")", canvas.width / 2, 100);
-                        x.fillStyle = "black";
-                        x.fillText("Is corrupt or not an image", canvas.width / 2, 200);
-
-                        var xhr = new XMLHttpRequest();
-                        if (/(html|htm)$/.test(imageFiles[currentImage].filename)) {
-                            xhr.open("GET", url, true);
-                            xhr.onload = function () {
-                                $("#mainText").css("display", "");
-                                $("#mainText").innerHTML("<iframe style=\"width:100%;height:700px;border:0\" src=\"data:text/html," + escape(xhr.responseText) + "\"></iframe>");
-                            };
-                            xhr.send(null);
-                        } else if (!/(jpg|jpeg|png|gif|webp)$/.test(imageFiles[currentImage].filename) && imageFiles[currentImage].data.uncompressedSize < 10 * 1024) {
-                            xhr.open("GET", url, true);
-                            xhr.onload = function () {
-                                $("#mainText").css("display", "");
-                                $("#mainText").innerText(xhr.responseText);
-                            };
-                            xhr.send(null);
-                        }
-                        reject;
-                        return;
-                    };
-
-                    img.onload = function () {
-                        var h = img.height,
-                            w = img.width,
-                            sw = w,
-                            sh = h;
-                        settings.rotateTimes = (4 + settings.rotateTimes) % 4;
-                        x.save();
-                        if (settings.rotateTimes % 2 === 1) {
-                            sh = w;
-                            sw = h;
-                        }
-
-                        if (doublePages[currentImage] === undefined) {
-                            currentPageIsDoublePage = isDoublePage(h, w);
-                            doublePages[currentImage] = currentPageIsDoublePage;
-                        }
-                        else
-                            currentPageIsDoublePage = doublePages[currentImage];
-
-                        canvas.height = sh;
-                        canvas.width = sw;
-                        x.translate(sw / 2, sh / 2);
-                        x.rotate(Math.PI / 2 * settings.rotateTimes);
-                        x.translate(-w / 2, -h / 2);
-                        if (settings.vflip) {
-                            x.scale(1, -1);
-                            x.translate(0, -h);
-                        }
-                        if (settings.hflip) {
-                            x.scale(-1, 1);
-                            x.translate(-w, 0);
-                        }
-                        canvas.style.display = "none";
-                        scrollTo(0, 0);
-                        x.drawImage(img, 0, 0);
-
-                        if (!currentPageIsDoublePage && settings.pageMode == 2) {
-                            // draw shadow
-                            x.shadowBlur = 80;
-                            x.shadowColor = "#000000AA";
-                            x.fillRect(canvas.width, -50, 50, canvas.height + 100);
-                        }
-
-
-                        var blockSize = 1, // only visit every 5 pixels
-                            defaultRGB = { r: 255, g: 255, b: 255 }, // for non-supporting envs
-                            data,
-                            i = -4,
-                            length,
-                            rgb = { r: 0, g: 0, b: 0 },
-                            count = 0;
-
-                        var borderColor = defaultRGB;
-
-                        try {
-                            pixeldata = x.getImageData(0, 0, 10, 10);
-                            length = pixeldata.data.length;
-                            while ((i += blockSize * 4) < length) {
-                                ++count;
-                                rgb.r += pixeldata.data[i];
-                                rgb.g += pixeldata.data[i + 1];
-                                rgb.b += pixeldata.data[i + 2];
-                            }
-
-                            // ~~ used to floor values
-                            rgb.r = ~~(rgb.r / count);
-                            rgb.g = ~~(rgb.g / count);
-                            rgb.b = ~~(rgb.b / count);
-
-                            borderColor = rgb;
-
-                        } catch (e) {
-                            /* security error, img on diff domain *///alert('x');
-                            // return defaultRGB;
-                        }
-
-                        updateScale(false);
-
-                        canvas.style.display = "";
-                        $("body").css("overflowY", "");
-
-                        $("#image-left").css("background-color", "rgb(" + borderColor.r + ", " + borderColor.g + ", " + borderColor.b + ")");
-
-
-                        x.restore();
-                        resolve();
-                    };
-                    img.src = url;
-                }
-            }
-        },
-        renderDoublePage: function () {
             let preferences = this.preferences;
             let pageInfo = this.pageInfo[this.currentPage];
             let renderView = this.$elem.find(".render-view");
@@ -689,6 +493,114 @@ if (window.opera) {
             return new Promise(async (resolve, reject) => {
 
                 var canvas = await this.renderPageCanvas(this.currentPage);
+
+                renderView.html("");
+                renderView.append(canvas);
+
+                var rgb = self.getColorKey(self, canvas, true);
+                if (rgb !== undefined) {
+                    self.$elem.find(".page-view").css("background", "rgb(" + rgb.r + ", " + rgb.g + ", " + rgb.b + ")");
+                }
+
+                if (lastScrollPosition !== undefined) {
+                    $(document).scrollTop(lastScrollPosition);
+                }
+                self.applyRenderScale();
+                resolve();
+            });
+
+
+
+
+
+
+
+        },
+        renderDoublePage: function () {
+
+            var canvas = document.createElement('canvas');
+            var context = canvas.getContext("2d");
+
+            let preferences = this.preferences;
+            let pageInfo = this.pageInfo[this.currentPage];
+            let renderView = this.$elem.find(".render-view");
+            let lastScrollPosition = this.preferences.nextPage !== 0 ? this.lastScrollPosition : undefined;
+            let self = this;
+            return new Promise(async (resolve, reject) => {
+
+                var canvas1 = await this.renderPageCanvas(this.currentPage);
+                var canvas2 = await this.renderPageCanvas(this.currentPage + 1);
+                context.save();
+
+                var h = Math.max(canvas1.height, canvas2.height),
+                    w = canvas1.width + canvas2.width;
+                if (preferences.rotateTimes % 2 === 1) {
+                    h = canvas1.height + canvas2.height;
+                    w = Math.max(canvas1.width, canvas2.width);
+                }
+
+                canvas.height = h;
+                canvas.width = w;
+
+                if (preferences.rotateTimes === 0) {
+                    context.drawImage(canvas1, 0, 0);
+                    context.drawImage(canvas2, canvas1.width, 0);
+                    if (self.preferences.pageShadow) {
+                        const shadowSize = 0.06;
+                        // Create gradient
+                        var gradient = context.createLinearGradient(canvas1.width - (canvas1.width * shadowSize), 0, canvas1.width + (canvas2.width * shadowSize), 0);
+                        gradient.addColorStop(0, "#00000000");
+                        gradient.addColorStop(.38, "#00000044");
+                        gradient.addColorStop(.47, "#00000066");
+                        gradient.addColorStop(.5, "#00000088");
+                        gradient.addColorStop(.53, "#00000066");
+                        gradient.addColorStop(.62, "#00000044");
+                        gradient.addColorStop(1, "#00000000"); 
+
+                        // Fill with gradient
+                        context.fillStyle = gradient;
+                        context.fillRect(canvas1.width - (canvas1.width * shadowSize), 0, (canvas1.width * shadowSize) + (canvas2.width * shadowSize), h);
+                    }
+                }
+                else if (preferences.rotateTimes === 1) {
+                    context.drawImage(canvas1, 0, 0);
+                    context.drawImage(canvas2, 0, canvas1.height);
+                }
+                else if (preferences.rotateTimes === 2) {
+                    context.drawImage(canvas2, 0, 0);
+                    context.drawImage(canvas1, canvas2.width, 0);
+                }
+                else if (preferences.rotateTimes === 3) {
+                    context.drawImage(canvas2, 0, 0);
+                    context.drawImage(canvas1, 0, canvas2.height);
+                }
+
+
+
+                // if (!currentPageIsDoublePage && settings.pageMode == 2) {
+                //     // draw shadow
+                //     x.shadowBlur = 80;
+                //     x.shadowColor = "#000000AA";
+                //     x.fillRect(canvas.width, -50, 50, canvas.height + 100);
+                // }
+
+
+
+                var rgb1 = self.getColorKey(self, canvas, true);
+                var rgb2 = self.getColorKey(self, canvas, false);
+                if (rgb1 !== undefined && rgb2 !== undefined) {
+                    // self.$elem.find(".page-view").css("background", "rgb(" + rgb1.r + ", " + rgb1.g + ", " + rgb1.b + ")");
+                    var linear = `linear-gradient(90deg, rgb(${rgb1.r}, ${rgb1.g}, ${rgb1.b}) 50%, rgb(${rgb2.r}, ${rgb2.g}, ${rgb2.b})  50%)`;
+                    self.$elem.find(".page-view").css("background", linear);
+                }
+                else if (rgb1 !== undefined) {
+                    self.$elem.find(".page-view").css("background", "rgb(" + rgb1.r + ", " + rgb1.g + ", " + rgb1.b + ")");
+                }
+                else if (rgb2 !== undefined) {
+                    self.$elem.find(".page-view").css("background", "rgb(" + rgb2.r + ", " + rgb2.g + ", " + rgb2.b + ")");
+                }
+
+
                 renderView.html("");
                 renderView.append(canvas);
 
@@ -788,20 +700,14 @@ if (window.opera) {
             var pageOffset = this.preferences.pageMode == 2 ? 1 : 0;
             for (let i = 1; i <= this.preferences.preloadPageNb + pageOffset; i++) {
                 if (this.currentPage + i <= Math.max(this.bookInfo.page_count, this.pageInfo.length) && this.pageInfo[this.currentPage + i] === undefined) {
-                    if (pageOffset > 0) {
-                        await this.loadPage(this.currentPage + i);
-                    }
-                    else {
-                        this.loadPage(this.currentPage + i); // do not await, run async
-                    }
+                    await this.loadPage(this.currentPage + i);
                 }
             }
             for (let i = 1; i <= this.preferences.preloadPageNb; i++) {
                 if (this.currentPage - i >= 0 && this.pageInfo[this.currentPage - i] === undefined) {
-                    this.loadPage(this.currentPage - i); // do not await, run async
+                    await this.loadPage(this.currentPage - i);
                 }
             }
-
         },
         loadPage: async function (index) {
             let filename = this.fetchPagesUrl + index;
@@ -839,16 +745,18 @@ if (window.opera) {
                 img.onload = function () {
                     pageInfo.height = img.height;
                     pageInfo.width = img.width;
-                    pageInfo.isDoublePage = false;
+                    pageInfo.isDoublePage = (rotateTimes) => {
 
-                    if (rotateTimes == 0 || rotateTimes == 2) {
-                        if (pageInfo.width > pageInfo.height) {
-                            pageInfo.isDoublePage = true;
+                        if (rotateTimes == 0 || rotateTimes == 2) {
+                            if (pageInfo.width > pageInfo.height) {
+                                return true;
+                            }
+                        } else if (rotateTimes == 1 || rotateTimes == 3) {
+                            if (pageInfo.height > pageInfo.width) {
+                                return true;
+                            }
                         }
-                    } else if (rotateTimes == 1 || rotateTimes == 3) {
-                        if (pageInfo.height > pageInfo.width) {
-                            pageInfo.isDoublePage = true;
-                        }
+                        return false;
                     }
                     resolve();
                 };
@@ -890,15 +798,23 @@ if (window.opera) {
         updatePagesList: function () {
             var pageList = this.$elem.find(".pages-list");
             pageList.html("");
-            this.pageInfo.forEach(element => {
-                pageList.append(
-                    '<section class="page-thumbnail">' +
-                    `<a data-page-nb="${element.id}">` +
-                    `<img src="${element.blobUrl}" alt="page ${element.id}" />` +
-                    `<span>${element.id}</span>` +
-                    '</section>'
-                );
-            });
+
+            for (let i = 0; i < this.pageInfo.length; i++) {
+                if (this.pageInfo[i]) {
+                    var dblClass = "is-single-page";
+                    if (this.pageInfo[i] && this.pageInfo[i].isDoublePage(this.preferences.forceRotationDetection ? this.preferences.rotateTimes : 0) ||
+                        this.pageInfo[i + 1] && this.pageInfo[i + 1].isDoublePage(this.preferences.forceRotationDetection ? this.preferences.rotateTimes : 0)) {
+                        var dblClass = "is-double-page";
+                    }
+                    pageList.append(
+                        `<section class="page-thumbnail ${dblClass}">` +
+                        `<a data-page-nb="${this.pageInfo[i].id}">` +
+                        `<img src="${this.pageInfo[i].blobUrl}" alt="page ${this.pageInfo[i].id}" />` +
+                        `<span>${this.pageInfo[i].id}</span>` +
+                        '</section>'
+                    );
+                }
+            }
         },
         savePreferences: function () {
             localStorage.comicsReaderPreferences = JSON.stringify(this.preferences);
@@ -971,8 +887,8 @@ if (window.opera) {
                 this.currentPage--;
             }
             else if (this.preferences.pageMode == 2) {
-                if (this.pageInfo[this.currentPage - 1].isDoublePage ||
-                    this.pageInfo[this.currentPage - 2].isDoublePage) {
+                if (this.pageInfo[this.currentPage - 1].isDoublePage(this.preferences.forceRotationDetection ? this.preferences.rotateTimes : 0) ||
+                    this.pageInfo[this.currentPage - 2].isDoublePage(this.preferences.forceRotationDetection ? this.preferences.rotateTimes : 0)) {
                     this.currentPage--;
                 }
                 else {
@@ -993,8 +909,8 @@ if (window.opera) {
                 this.currentPage++;
             }
             else if (this.preferences.pageMode == 2) {
-                if (this.pageInfo[this.currentPage + 1].isDoublePage ||
-                    this.pageInfo[this.currentPage + 2].isDoublePage) {
+                if (this.pageInfo[this.currentPage + 1].isDoublePage(this.preferences.forceRotationDetection ? this.preferences.rotateTimes : 0) ||
+                    this.pageInfo[this.currentPage + 2].isDoublePage(this.preferences.forceRotationDetection ? this.preferences.rotateTimes : 0)) {
                     this.currentPage++;
                 }
                 else {
@@ -1064,6 +980,7 @@ if (window.opera) {
         bookInfoUrl: "",
         bookmark: 0,
         useBookmarks: false,
+        csrfToken: "",
 
         hflip: false,
         vflip: false,
