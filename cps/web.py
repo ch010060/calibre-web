@@ -1192,7 +1192,7 @@ def serve_book_page(book_id, book_format, page_id):
     extension_upper = book_format.upper()
     data = calibre_db.get_book_format(book_id, extension_upper)
     if extension_upper in ['CBZ', 'CBT', 'CBR']:
-        image_binary, image_name = comic.extract_page(os.path.join(config.config_calibre_dir, book.path, data.name + "." + book_format), "." + book_format, config.config_rarfile_location, page_id)
+        image_binary, image_name = comic.extract_page(os.path.join(config.config_calibre_dir, book.path, data.name + "." + book_format.lower()), "." + book_format, config.config_rarfile_location, page_id)
         response = make_response(image_binary)
         (mime,enc) = mimetypes.guess_type(image_name)
         response.headers.set('Content-Type', mime )
