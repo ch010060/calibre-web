@@ -155,6 +155,18 @@
       "css": "right-open",
       "code": 59392,
       "src": "typicons"
+    },
+    {
+      "uid": "ivmsk67zo1yb1tthd3ugi4xnb3get418",
+      "css": "sun",
+      "code": 59407,
+      "src": "typicons"
+    },
+    {
+      "uid": "5840fe162df3bcc8e390c58ef4e2acf9",
+      "css": "sun-filled",
+      "code": 59408,
+      "src": "typicons"
     }
   ]
 }

@@ -1,3 +1,112 @@
+/** Themes **/
+body {
+    &.dark-theme {
+
+        background: #000;
+
+
+
+
+        .comics-reader-app {
+
+            .icon-sun {
+                &:before {
+                    content: '\e80f';
+                }
+            }
+
+            .sidebar {
+                background-color: #111;
+            }
+
+            .menu-bar {
+                background-color: #000;
+
+                [class^="icon-"]::before,
+                [class*=" icon-"]::before {
+                    color: #FFF;
+                }
+
+                .menu-button {
+                    border-color: #fff;
+                }
+
+                .line-progress {
+                    background-color: #2a3348;
+                }
+            }
+
+            .page-progress {
+                background-color: #FFFFFF99;
+                color: #111111;
+            }
+
+            .overlay {
+                background: rgb(38 38 38 / 80%);
+            }
+            .md-content{
+                background-color: #121212;
+                color: #a3a3a3;
+            }
+
+            .arrow-left,
+            .arrow-right {
+                color:#707070;
+            }
+        }
+
+
+        /* ===== Scrollbar CSS ===== */
+        /* Firefox */
+        * {
+            scrollbar-color: #2a3348 #ccc;
+        }
+
+        /* Chrome, Edge, and Safari */
+
+        *::-webkit-scrollbar-track {
+            background: #ccc;
+        }
+
+        *::-webkit-scrollbar-thumb {
+            background-color: #2a3348;
+            border-radius: 4px;
+            border: 0px none #ccc;
+        }
+
+    }
+
+
+    &.light-theme {
+
+        background: #FFF;
+
+        .comics-reader-app {
+
+            .icon-sun {
+                &:before {
+                    content: '\e810';
+                }
+            }
+
+
+            .sidebar {
+                background-color: #444;
+            }
+
+
+            .menu-bar {
+                background-color: #FFF;
+            }
+        }
+
+    }
+
+
+}
+
+
+
 body {
     background: #FFF;
     overflow-x: hidden;

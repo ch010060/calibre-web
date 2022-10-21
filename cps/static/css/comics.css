@@ -1,3 +1,68 @@
+/** Themes **/
+body.dark-theme {
+  background: #000;
+  /* ===== Scrollbar CSS ===== */
+  /* Firefox */
+  /* Chrome, Edge, and Safari */
+}
+body.dark-theme .comics-reader-app .icon-sun:before {
+  content: "\e80f";
+}
+body.dark-theme .comics-reader-app .sidebar {
+  background-color: #111;
+}
+body.dark-theme .comics-reader-app .menu-bar {
+  background-color: #000;
+}
+body.dark-theme .comics-reader-app .menu-bar [class^=icon-]::before,
+body.dark-theme .comics-reader-app .menu-bar [class*=" icon-"]::before {
+  color: #FFF;
+}
+body.dark-theme .comics-reader-app .menu-bar .menu-button {
+  border-color: #fff;
+}
+body.dark-theme .comics-reader-app .menu-bar .line-progress {
+  background-color: #2a3348;
+}
+body.dark-theme .comics-reader-app .page-progress {
+  background-color: rgba(255, 255, 255, 0.6);
+  color: #111111;
+}
+body.dark-theme .comics-reader-app .overlay {
+  background: rgba(38, 38, 38, 0.8);
+}
+body.dark-theme .comics-reader-app .md-content {
+  background-color: #121212;
+  color: #a3a3a3;
+}
+body.dark-theme .comics-reader-app .arrow-left,
+body.dark-theme .comics-reader-app .arrow-right {
+  color: #707070;
+}
+body.dark-theme * {
+  scrollbar-color: #2a3348 #ccc;
+}
+body.dark-theme *::-webkit-scrollbar-track {
+  background: #ccc;
+}
+body.dark-theme *::-webkit-scrollbar-thumb {
+  background-color: #2a3348;
+  border-radius: 4px;
+  border: 0px none #ccc;
+}
+body.light-theme {
+  background: #FFF;
+}
+body.light-theme .comics-reader-app .icon-sun:before {
+  content: "\e810";
+}
+body.light-theme .comics-reader-app .sidebar {
+  background-color: #444;
+}
+body.light-theme .comics-reader-app .menu-bar {
+  background-color: #FFF;
+}
+
 body {
   background: #FFF;
   overflow-x: hidden;
