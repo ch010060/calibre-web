@@ -58,6 +58,16 @@ if (window.opera) {
             this.fetchPagesUrl = "";
             this.bookInfo = {};
             this.pageInfo = [];
+            var _currentPage = 0;
+            Object.defineProperty(this, 'currentPage', {
+                get: function () { return _currentPage; },
+                set: function (v) {
+                    _currentPage = v;
+                    this.updateProgress();
+                }
+            });
+
+
 
             if (!this.options.bookInfoUrl) {
                 throw ("ComicsReader: bookInfoUrl not set in options.");
@@ -121,7 +131,6 @@ if (window.opera) {
                 }
 
                 this.useBookmarks = false;
-                this.currentPage = 0;
                 if (this.bookmarkUrl && this.options.useBookmarks == true && this.options.csrfToken) {
                     this.csrfToken = this.options.csrfToken;
                     this.useBookmarks = true;
@@ -144,6 +153,10 @@ if (window.opera) {
 
             var lineProgress = document.createElement("div");
             $(lineProgress).addClass("line-progress");
+            
+            var lineProgressWrap = document.createElement("div");
+            $(lineProgressWrap).addClass("line-progress-wrap");
+            lineProgressWrap.append(lineProgress);
 
             var title = document.createElement("div");
             $(title).addClass("book-title");
@@ -166,7 +179,7 @@ if (window.opera) {
 
             var menu = document.createElement("div");
             $(menu).addClass("menu-bar");
-            $(menu).append(lineProgress);
+            $(menu).append(lineProgressWrap);
             $(menu).append(menuContent);
 
             var render = document.createElement("div");
@@ -231,9 +244,25 @@ if (window.opera) {
 
             this.screenfull();
 
-            // $(window).resize(function () {
-            //     updateScale(false);
-            // });
+            this.$elem.find(".page-progress").hover(
+                function () { // handler in
+                    $(this).animate({ opacity: 1 }, 250);
+                    // Additional actions (display info, etc.)
+                }, function () { // handler out
+                    $(this).delay(5000).animate({ opacity: 0 }, 2000);
+                    // Additional actions (hide info, etc.)
+                }
+            );
+
+            this.$elem.find(".line-progress-wrap").click((evt) => {
+                var offset = $(evt.currentTarget).offset();
+                var x = evt.pageX - offset.left;
+                var rate = x / $(evt.currentTarget).width();
+                self.currentPage = Math.max(1, Math.ceil(rate * self.bookInfo.page_count)) - 1;
+                self.loadPageRange().then(() => self.renderPage());
+            })
+
+
 
         },
         keyEvents: function (event) {
@@ -396,6 +425,38 @@ if (window.opera) {
                     console.error(error);
                 });
             }
+        },
+        updateProgress: function () {
+            var activepages = [];
+            var currentPageText = "";
+            if (this.preferences.pageMode == 1) {
+                currentPageText = this.currentPage + 1;
+                activepages.push(this.currentPage);
+            } else if (this.preferences.pageMode == 2) {
+                if (this.pageInfo[this.currentPage]?.isDoublePage(this.preferences.forceRotationDetection ? this.preferences.rotateTimes : 0) ||
+                    this.pageInfo[this.currentPage + 1]?.isDoublePage(this.preferences.forceRotationDetection ? this.preferences.rotateTimes : 0)) {
+                    currentPageText = this.currentPage + 1;
+                    activepages.push(this.currentPage);
+                } else {
+                    currentPageText = `${this.currentPage + 1}-${this.currentPage + 2}`;
+                    activepages.push(this.currentPage);
+                    activepages.push(this.currentPage + 1);
+                }
+            }
+            var progressText = `${currentPageText}/${this.bookInfo.page_count}`;
+            this.$elem.find(".page-progress").text(progressText);
+            this.$elem.find(".page-progress").stop(true).animate({ opacity: 1 }, 250).delay(5000).animate({ opacity: 0 }, 2000);
+            this.$elem.find(".line-progress").css('width', `${(this.currentPage + 1) / this.bookInfo.page_count * 100}%`);
+
+            var pages = this.$elem.find(".pages-list a.active");
+            pages.removeClass("active");
+            var self = this.$elem;
+            activepages.forEach(id => {
+                self.find(`.pages-list a[data-page-nb='${id}']`).addClass("active");
+            });
+            
+            this.$elem.find(".sidebar").scrollTop(0);
+            this.$elem.find(".sidebar").scrollTop(this.$elem.find(".sidebar .pages-list a.active").position()?.top); 
         },
         getColorKey: function (self, canvas, left = true) {
             if (self.preferences.autoBackground) {
@@ -565,17 +626,6 @@ if (window.opera) {
                     context.drawImage(canvas1, 0, canvas2.height);
                 }
 
-
-
-                // if (!currentPageIsDoublePage && settings.pageMode == 2) {
-                //     // draw shadow
-                //     x.shadowBlur = 80;
-                //     x.shadowColor = "#000000AA";
-                //     x.fillRect(canvas.width, -50, 50, canvas.height + 100);
-                // }
-
-
-
                 var rgb1 = self.getColorKey(self, canvas, true);
                 var rgb2 = self.getColorKey(self, canvas, false);
                 if (rgb1 !== undefined && rgb2 !== undefined) {
@@ -705,7 +755,7 @@ if (window.opera) {
                 var mimetype = response.headers.get("content-type");
 
                 this.pageInfo[index] = {
-                    id: index,
+                    id: index + 1,
                     url: filename,
                     filetype: mimetype,
                     blobUrl: this.createBlob(ar, mimetype),
@@ -784,8 +834,8 @@ if (window.opera) {
             return URL.createObjectURL(blob);
         },
         updatePagesList: function () {
-            var pageList = this.$elem.find(".pages-list");
-            pageList.html("");
+            
+            var pageList = $(document.createElement("div"));
 
             var sideClass = "page-left";
             for (let i = 0; i < this.pageInfo.length; i++) {
@@ -796,11 +846,16 @@ if (window.opera) {
                         dblClass = "is-double-page";
                         sideClass = "page-left";
                     }
+                    var activeClass = i == this.currentPage ? "active" : "";
+                    if (this.preferences.pageMode == 2 && dblClass == "is-single-page" && sideClass == "page-right" && activeClass == ""){
+                        activeClass = i == this.currentPage + 1 ? "active" : "";
+                    }
+
                     pageList.append(
                         `<section class="page-thumbnail ${dblClass} ${sideClass}">` +
-                        `<a data-page-nb="${this.pageInfo[i].id}">` +
+                        `<a data-page-nb="${i}" class="${activeClass}">` +
                         `<img src="${this.pageInfo[i].blobUrl}" alt="page ${this.pageInfo[i].id}" />` +
-                        `<span>${this.pageInfo[i].id}</span>` +
+                        `<div class="page-nb"><span>${this.pageInfo[i].id}</span></div>` +
                         '</section>'
                     );
                     if (dblClass != "is-double-page") {
@@ -808,6 +863,18 @@ if (window.opera) {
                     }
                 }
             }
+            
+            var pageListHtml = this.$elem.find(".pages-list");
+            pageListHtml.html(pageList.html());
+
+            pageListHtml.find("a").click((event)=>{
+                var pageNb = $(event.currentTarget).data("page-nb");
+                this.currentPage = pageNb;
+                this.renderPage();
+            })
+
+            this.$elem.find(".sidebar").scrollTop(0);
+            this.$elem.find(".sidebar").scrollTop(this.$elem.find(".sidebar .pages-list a.active").position()?.top); 
         },
         savePreferences: function () {
             localStorage.comicsReaderPreferences = JSON.stringify(this.preferences);

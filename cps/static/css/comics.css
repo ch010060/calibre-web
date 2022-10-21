@@ -47,41 +47,82 @@ body.disabled-scrollbar::-webkit-scrollbar {
   /** MENU BAR **/
   /** MAIN VIEW**/
   /** FULLSCREEN **/
+  /** PROGRESS **/
   /** MODAL **/
 }
 .comics-reader-app .sidebar {
+  width: 200px;
   max-width: 200px;
   max-height: 100vh;
   overflow-y: scroll;
   overflow-x: hidden;
+  background-color: #444;
 }
 .comics-reader-app .sidebar.closed {
   display: none;
 }
 .comics-reader-app .sidebar .pages-list {
+  width: 184px;
   display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
+  flex-direction: column;
+  flex-wrap: nowrap;
   justify-content: center;
+  align-items: center;
+}
+.comics-reader-app .sidebar .pages-list .page-thumbnail {
+  margin: 2px 0;
 }
 .comics-reader-app .sidebar .pages-list .page-thumbnail a {
-  width: calc(100% - 30px);
-  height: 120px;
-  display: block;
-  padding: 15px;
+  max-height: 138px;
+  display: inline-block;
   text-align: center;
+  cursor: pointer;
+  padding: 4px;
+  transition: all 0.2s ease;
+  background-color: #666;
+  margin: 0;
+  position: relative;
+  overflow: hidden;
+  z-index: 90;
+}
+.comics-reader-app .sidebar .pages-list .page-thumbnail a:hover {
+  outline: none;
+  box-shadow: 0 2px 8px 1px black;
 }
 .comics-reader-app .sidebar .pages-list .page-thumbnail a img {
   -o-object-fit: contain;
      object-fit: contain;
-  height: 100%;
+  max-height: 138px;
   width: auto;
 }
-.comics-reader-app .sidebar .pages-list .page-thumbnail a span {
+.comics-reader-app .sidebar .pages-list .page-thumbnail a .page-nb {
+  position: absolute;
+  bottom: 0px;
+  right: 0px;
+  background-color: #666;
+  padding: 3px 4px 2px 2px;
+  transform: skewY(-10deg);
+}
+.comics-reader-app .sidebar .pages-list .page-thumbnail a .page-nb span {
   display: block;
+  color: #fff;
+  transform: skewY(10deg);
+}
+.comics-reader-app .sidebar .pages-list .page-thumbnail a.active {
+  background-color: #45b29d;
+}
+.comics-reader-app .sidebar .pages-list .page-thumbnail a.active .page-nb {
+  background-color: #45b29d;
+}
+.comics-reader-app .sidebar .pages-list.double-view {
+  flex-direction: row;
+  flex-wrap: wrap;
 }
 .comics-reader-app .sidebar .pages-list.double-view .page-thumbnail.is-single-page {
   width: 50%;
+}
+.comics-reader-app .sidebar .pages-list.double-view .page-thumbnail.is-single-page img {
+  width: 80.5px;
 }
 .comics-reader-app .sidebar .pages-list.double-view .page-thumbnail.is-single-page.page-left a {
   padding-right: 0;
@@ -90,6 +131,19 @@ body.disabled-scrollbar::-webkit-scrollbar {
 .comics-reader-app .sidebar .pages-list.double-view .page-thumbnail.is-single-page.page-right a {
   padding-left: 0;
   margin-right: 7.5px;
+}
+.comics-reader-app .sidebar .pages-list.double-view .page-thumbnail.is-single-page.page-right a .page-nb {
+  left: 0px;
+  right: unset;
+  transform: skewY(10deg);
+}
+.comics-reader-app .sidebar .pages-list.double-view .page-thumbnail.is-single-page.page-right a .page-nb span {
+  transform: skewY(-10deg);
+}
+.comics-reader-app .sidebar .pages-list.double-view .page-thumbnail.is-single-page.page-right a:hover {
+  outline: none;
+  box-shadow: 0 2px 8px 1px black;
+  z-index: 89;
 }
 .comics-reader-app .sidebar .pages-list.double-view .page-thumbnail.is-double-page {
   width: 100%;
@@ -101,14 +155,18 @@ body.disabled-scrollbar::-webkit-scrollbar {
   background-color: #FFF;
 }
 .comics-reader-app .menu-bar .line-progress {
-  height: 3px;
+  height: 2px;
+  margin-bottom: 2px;
   width: 100%;
+  background-color: #45b29d;
+  border-radius: 1px;
 }
 .comics-reader-app .menu-bar .menu-content {
   display: flex;
   flex-direction: row;
   flex-wrap: nowrap;
-  height: 24px;
+  height: 26px;
+  align-items: center;
   padding: 0 2px;
 }
 .comics-reader-app .menu-bar .menu-content [class$=-button],
@@ -249,6 +307,33 @@ body.disabled-scrollbar::-webkit-scrollbar {
 }
 .comics-reader-app .main-view.fullscreen.sidebar-opened .render-view canvas.fit-best {
   max-height: 100vh;
+}
+.comics-reader-app .page-progress {
+  position: fixed;
+  bottom: 10px;
+  right: 10px;
+  background-color: rgba(0, 0, 0, 0.6);
+  color: #EEEEEE;
+  font-size: 1.1em;
+  padding: 3px 5px;
+  border-radius: 3px;
+  z-index: 100;
+}
+@-webkit-keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.1;
+  }
+}
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.1;
+  }
 }
 .comics-reader-app .preferences-modal .closer {
   cursor: pointer;

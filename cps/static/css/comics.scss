@@ -51,46 +51,96 @@ body {
 
     /** SIDEBAR **/
     .sidebar {
+        width: 200px;
         max-width: 200px;
         max-height: 100vh;
         overflow-y: scroll;
         overflow-x: hidden;
+
+        background-color: #444;
 
         &.closed {
             display: none;
         }
 
         .pages-list {
+            width: calc(200px - 16px);
             display: flex;
-            flex-direction: row;
-            flex-wrap: wrap;
+            flex-direction: column;
+            flex-wrap: nowrap;
             justify-content: center;
+            align-items: center;
 
             .page-thumbnail {
-                a {
-                    width: calc(100% - 30px);
-                    height: calc(150px - 30px);
-                    display: block;
-                    padding: 15px;
+                margin: 2px 0;
 
+                a {
+                    // width: calc(100% - 12px);
+                    max-height: calc(150px - 12px);
+                    display: inline-block;
                     text-align: center;
+                    cursor: pointer;
+                    padding: 4px;
+                    transition: all 0.2s ease;
+                    // border: 1px solid;
+                    // border-radius: 2px;
+                    background-color: #666;
+                    margin: 0;
+                    position: relative;
+                    overflow: hidden;
+                    z-index: 90;
+
+
+                    &:hover {
+                        outline: none;
+                        box-shadow: 0 2px 8px 1px black;
+                    }
 
                     img {
                         object-fit: contain;
-                        height: 100%;
+                        max-height: calc(150px - 12px);
                         width: auto;
                     }
 
-                    span {
-                        display: block;
+                    .page-nb {
+                        position: absolute;
+                        bottom: 0px;
+                        right: 0px;
+                        background-color: #666;
+                        padding: 3px 4px 2px 2px;
+                        transform: skewY(-10deg);
+
+                        span {
+                            display: block;
+                            color: #fff;
+                            transform: skewY(10deg);
+                        }
+                    }
+
+                    &.active {
+                        background-color: #45b29d;
+
+                        .page-nb {
+                            background-color: #45b29d;
+                        }
                     }
                 }
+
             }
 
             &.double-view {
+
+                flex-direction: row;
+                flex-wrap: wrap;
+
                 .page-thumbnail {
                     &.is-single-page {
                         width: 50%;
+
+                        img {
+                            width: calc(184px / 2 - 4px - 15px/2);
+
+                        }
 
                         &.page-left {
                             a {
@@ -103,6 +153,22 @@ body {
                             a {
                                 padding-left: 0;
                                 margin-right: calc(15px/2);
+
+                                .page-nb {
+                                    left: 0px;
+                                    right: unset;
+                                    transform: skewY(10deg);
+
+                                    span {
+                                        transform: skewY(-10deg);
+                                    }
+                                }
+
+                                &:hover {
+                                    outline: none;
+                                    box-shadow: 0 2px 8px 1px black;
+                                    z-index: 89;
+                                }
                             }
                         }
                     }
@@ -123,16 +189,19 @@ body {
         background-color: #FFF;
 
         .line-progress {
-            height: 3px;
+            height: 2px;
+            margin-bottom: 2px;
             width: 100%;
+            background-color: #45b29d;
+            border-radius: 1px;
         }
 
         .menu-content {
             display: flex;
             flex-direction: row;
             flex-wrap: nowrap;
-            height: 24px;
-
+            height: 26px;
+            align-items: center;
             padding: 0 2px;
 
             [class$="-button"],
@@ -348,6 +417,30 @@ body {
         }
 
     }
+
+    /** PROGRESS **/
+    .page-progress {
+        position: fixed;
+        bottom: 10px;
+        right: 10px;
+        background-color: #00000099;
+        color: #EEEEEE;
+        font-size: 1.1em;
+        padding: 3px 5px;
+        border-radius: 3px;
+        z-index: 100;
+    }
+
+    @keyframes fadeOut {
+        from {
+            opacity: 1;
+        }
+
+        to {
+            opacity: 0.1;
+        }
+    }
+
 
     /** MODAL **/
     .preferences-modal {
