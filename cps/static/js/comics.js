@@ -537,7 +537,7 @@ if (window.opera) {
             } else {
                 this.lastScrollPosition = $(document).scrollTop();
             }
-            this.$elem.find(".page-view").css("background", null);
+            this.$elem.find(".page-view").css("background", "none");
             // render the page/pages based on the render mode
             if (this.preferences.pageMode == 1) {
                 this.$elem.find(".sidebar .pages-list").removeClass("double-view");
