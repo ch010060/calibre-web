@@ -37,20 +37,20 @@
       <div class="row">
         <div class="col-xs-6 col-md-6 col-sm-offset-3" style="margin-top:50px;">
             
-            <p class='text-justify attribute'><strong>Start Time: </strong>2022-09-25 22:15:18</p>
+            <p class='text-justify attribute'><strong>Start Time: </strong>2023-02-10 18:46:27</p>
             
         </div>
       </div>
       <div class="row">
         <div class="col-xs-6 col-md-6 col-sm-offset-3">
             
-            <p class='text-justify attribute'><strong>Stop Time: </strong>2022-09-26 04:46:12</p>
+            <p class='text-justify attribute'><strong>Stop Time: </strong>2023-02-11 01:04:02</p>
             
         </div>
       </div>
       <div class="row">
         <div class="col-xs-6 col-md-6 col-sm-offset-3">
-           <p class='text-justify attribute'><strong>Duration: </strong>5h 35 min</p>
+           <p class='text-justify attribute'><strong>Duration: </strong>5h 20 min</p>
         </div>
       </div>
       </div>
@@ -726,11 +726,11 @@
     
 
 
-    <tr id="su" class="passClass">
+    <tr id="su" class="failClass">
         <td>TestEbookConvertGDriveKepubify</td>
         <td class="text-center">3</td>
-        <td class="text-center">3</td>
-        <td class="text-center">0</td>
+        <td class="text-center">2</td>
+        <td class="text-center">1</td>
         <td class="text-center">0</td>
         <td class="text-center">0</td>
         <td class="text-center">
@@ -749,11 +749,33 @@
     
     
     
-        <tr id='pt9.2' class='hiddenRow bg-success'>
+        <tr id="ft9.2" class="none bg-danger">
             <td>
                 <div class='testcase'>TestEbookConvertGDriveKepubify - test_convert_only</div>
             </td>
-            <td colspan='6' align='center'>PASS</td>
+            <td colspan='6'>
+                <div class="text-center">
+                    <a class="popup_link text-center" onfocus='blur()' onclick="showTestDetail('div_ft9.2')">FAIL</a>
+                </div>
+                <!--css div popup start-->
+                <div id="div_ft9.2" class="popup_window test_output" style="display:block;">
+                    <div class='close_button pull-right'>
+                        <button type="button" class="close" aria-label="Close" onfocus="this.blur();"
+                                onclick="document.getElementById('div_ft9.2').style.display='none'"><span
+                                aria-hidden="true">&times;</span></button>
+                    </div>
+                    <div class="text-left pull-left">
+                        <pre class="text-left">Traceback (most recent call last):
+  File &#34;/home/ozzie/Development/calibre-web-test/test/test_ebook_convert_kepubify_gdrive.py&#34;, line 176, in test_convert_only
+    self.assertEqual(ret[-1][&#39;result&#39;], &#39;Finished&#39;)
+AssertionError: &#39;Started&#39; != &#39;Finished&#39;
+- Started
++ Finished</pre>
+                    </div>
+                    <div class="clearfix"></div>
+                </div>
+                <!--css div popup end-->
+            </td>
         </tr>
     
     
@@ -1638,9 +1660,9 @@
                     </div>
                     <div class="text-left pull-left">
                         <pre class="text-left">Traceback (most recent call last):
-  File &#34;/home/ozzie/Development/calibre-web-test/test/test_edit_books_metadata.py&#34;, line 167, in test_load_metadata
-    self.assertGreaterEqual(diff(BytesIO(cover), BytesIO(original_cover), delete_diff_file=True), 0.05)
-AssertionError: 0.0 not greater than or equal to 0.05</pre>
+  File &#34;/home/ozzie/Development/calibre-web-test/test/test_edit_books_metadata.py&#34;, line 133, in test_load_metadata
+    self.assertEqual(20, len(results))
+AssertionError: 20 != 10</pre>
                     </div>
                     <div class="clearfix"></div>
                 </div>
@@ -1654,9 +1676,9 @@ AssertionError: 0.0 not greater than or equal to 0.05</pre>
     <tr id="su" class="errorClass">
         <td>TestEditBooksOnGdrive</td>
         <td class="text-center">18</td>
-        <td class="text-center">17</td>
-        <td class="text-center">0</td>
+        <td class="text-center">15</td>
         <td class="text-center">1</td>
+        <td class="text-center">2</td>
         <td class="text-center">0</td>
         <td class="text-center">
             <a onclick="showClassDetail('c16', 18)">Detail</a>
@@ -1764,11 +1786,33 @@ AssertionError: 0.0 not greater than or equal to 0.05</pre>
     
     
     
-        <tr id='pt16.12' class='hiddenRow bg-success'>
+        <tr id="et16.12" class="none bg-info">
             <td>
                 <div class='testcase'>TestEditBooksOnGdrive - test_edit_language</div>
             </td>
-            <td colspan='6' align='center'>PASS</td>
+            <td colspan='6'>
+                <div class="text-center">
+                    <a class="popup_link text-center" onfocus='blur()' onclick="showTestDetail('div_et16.12')">ERROR</a>
+                </div>
+                <!--css div popup start-->
+                <div id="div_et16.12" class="popup_window test_output" style="display:block;">
+                    <div class='close_button pull-right'>
+                        <button type="button" class="close" aria-label="Close" onfocus="this.blur();"
+                                onclick="document.getElementById('div_et16.12').style.display='none'"><span
+                                aria-hidden="true">&times;</span></button>
+                    </div>
+                    <div class="text-left pull-left">
+                        <pre class="text-left">Traceback (most recent call last):
+  File &#34;/home/ozzie/Development/calibre-web-test/test/test_edit_ebooks_gdrive.py&#34;, line 571, in test_edit_language
+    self.edit_book(content={&#39;languages&#39;: &#39;German&#39;})
+  File &#34;/home/ozzie/Development/calibre-web-test/test/helper_ui.py&#34;, line 1754, in edit_book
+    ele.send_keys(Keys.CONTROL, &#34;a&#34;)
+AttributeError: &#39;bool&#39; object has no attribute &#39;send_keys&#39;</pre>
+                    </div>
+                    <div class="clearfix"></div>
+                </div>
+                <!--css div popup end-->
+            </td>
         </tr>
     
     
@@ -1782,11 +1826,31 @@ AssertionError: 0.0 not greater than or equal to 0.05</pre>
     
     
     
-        <tr id='pt16.14' class='hiddenRow bg-success'>
+        <tr id="ft16.14" class="none bg-danger">
             <td>
                 <div class='testcase'>TestEditBooksOnGdrive - test_edit_rating</div>
             </td>
-            <td colspan='6' align='center'>PASS</td>
+            <td colspan='6'>
+                <div class="text-center">
+                    <a class="popup_link text-center" onfocus='blur()' onclick="showTestDetail('div_ft16.14')">FAIL</a>
+                </div>
+                <!--css div popup start-->
+                <div id="div_ft16.14" class="popup_window test_output" style="display:block;">
+                    <div class='close_button pull-right'>
+                        <button type="button" class="close" aria-label="Close" onfocus="this.blur();"
+                                onclick="document.getElementById('div_ft16.14').style.display='none'"><span
+                                aria-hidden="true">&times;</span></button>
+                    </div>
+                    <div class="text-left pull-left">
+                        <pre class="text-left">Traceback (most recent call last):
+  File &#34;/home/ozzie/Development/calibre-web-test/test/test_edit_ebooks_gdrive.py&#34;, line 604, in test_edit_rating
+    self.assertEqual(1, len(books[1]))
+AssertionError: 1 != 0</pre>
+                    </div>
+                    <div class="clearfix"></div>
+                </div>
+                <!--css div popup end-->
+            </td>
         </tr>
     
     
@@ -1817,9 +1881,9 @@ AssertionError: 0.0 not greater than or equal to 0.05</pre>
                     </div>
                     <div class="text-left pull-left">
                         <pre class="text-left">Traceback (most recent call last):
-  File &#34;/home/ozzie/Development/calibre-web-test/test/test_edit_ebooks_gdrive.py&#34;, line 185, in test_edit_title
-    self.assertEqual(&#39;The camicdemo&#39;, books[1][8][&#39;title&#39;])
-IndexError: list index out of range</pre>
+  File &#34;/home/ozzie/Development/calibre-web-test/test/test_edit_ebooks_gdrive.py&#34;, line 230, in test_edit_title
+    self.assertEqual(ele.text, u&#39;Very long extra super turbo cool title without any issue of displaying including ö utf-8 characters&#39;)
+AttributeError: &#39;bool&#39; object has no attribute &#39;text&#39;</pre>
                     </div>
                     <div class="clearfix"></div>
                 </div>
@@ -2709,13 +2773,13 @@ IndexError: list index out of range</pre>
 
     <tr id="su" class="passClass">
         <td>TestLogin</td>
-        <td class="text-center">15</td>
-        <td class="text-center">15</td>
+        <td class="text-center">16</td>
+        <td class="text-center">16</td>
         <td class="text-center">0</td>
         <td class="text-center">0</td>
         <td class="text-center">0</td>
         <td class="text-center">
-            <a onclick="showClassDetail('c30', 15)">Detail</a>
+            <a onclick="showClassDetail('c30', 16)">Detail</a>
         </td>
     </tr>
 
@@ -2848,6 +2912,15 @@ IndexError: list index out of range</pre>
     
     
         <tr id='pt30.15' class='hiddenRow bg-success'>
+            <td>
+                <div class='testcase'>TestLogin - test_proxy_login_opds</div>
+            </td>
+            <td colspan='6' align='center'>PASS</td>
+        </tr>
+    
+    
+    
+        <tr id='pt30.16' class='hiddenRow bg-success'>
             <td>
                 <div class='testcase'>TestLogin - test_robots</div>
             </td>
@@ -3826,13 +3899,13 @@ IndexError: list index out of range</pre>
 
     <tr id="su" class="passClass">
         <td>TestUploadEPubs</td>
-        <td class="text-center">4</td>
-        <td class="text-center">4</td>
+        <td class="text-center">5</td>
+        <td class="text-center">5</td>
         <td class="text-center">0</td>
         <td class="text-center">0</td>
         <td class="text-center">0</td>
         <td class="text-center">
-            <a onclick="showClassDetail('c44', 4)">Detail</a>
+            <a onclick="showClassDetail('c44', 5)">Detail</a>
         </td>
     </tr>
 
@@ -3866,6 +3939,15 @@ IndexError: list index out of range</pre>
     
     
         <tr id='pt44.4' class='hiddenRow bg-success'>
+            <td>
+                <div class='testcase'>TestUploadEPubs - test_upload_epub_identifier</div>
+            </td>
+            <td colspan='6' align='center'>PASS</td>
+        </tr>
+    
+    
+    
+        <tr id='pt44.5' class='hiddenRow bg-success'>
             <td>
                 <div class='testcase'>TestUploadEPubs - test_upload_epub_lang</div>
             </td>
@@ -4770,10 +4852,10 @@ IndexError: list index out of range</pre>
 
     <tr id='total_row' class="text-center bg-grey">
         <td>Total</td>
-        <td>423</td>
-        <td>414</td>
-        <td>1</td>
-        <td>1</td>
+        <td>425</td>
+        <td>413</td>
+        <td>3</td>
+        <td>2</td>
         <td>7</td>
         <td>&nbsp;</td>
     </tr>
@@ -4802,7 +4884,7 @@ IndexError: list index out of range</pre>
           
             <tr>
               <th>Platform</th>
-              <td>Linux 5.15.0-48-generic #54-Ubuntu SMP Fri Aug 26 13:26:29 UTC 2022 x86_64 x86_64</td>
+              <td>Linux 5.19.0-28-generic #29~22.04.1-Ubuntu SMP PREEMPT_DYNAMIC Thu Dec 15 12:05:40 UTC 2 x86_64 x86_64</td>
               <td>Basic</td>
             </tr>
           
@@ -4820,13 +4902,13 @@ IndexError: list index out of range</pre>
           
             <tr>
               <th>APScheduler</th>
-              <td>3.9.1</td>
+              <td>3.10.0</td>
               <td>Basic</td>
             </tr>
           
             <tr>
               <th>Babel</th>
-              <td>2.10.3</td>
+              <td>2.11.0</td>
               <td>Basic</td>
             </tr>
           
@@ -4844,19 +4926,19 @@ IndexError: list index out of range</pre>
           
             <tr>
               <th>Flask</th>
-              <td>2.0.3</td>
+              <td>2.1.3</td>
               <td>Basic</td>
             </tr>
           
             <tr>
-              <th>Flask-Babel</th>
-              <td>2.0.0</td>
+              <th>flask-babel</th>
+              <td>3.0.1</td>
               <td>Basic</td>
             </tr>
           
             <tr>
               <th>Flask-Login</th>
-              <td>0.6.1</td>
+              <td>0.6.2</td>
               <td>Basic</td>
             </tr>
           
@@ -4868,13 +4950,13 @@ IndexError: list index out of range</pre>
           
             <tr>
               <th>Flask-WTF</th>
-              <td>1.0.1</td>
+              <td>1.1.1</td>
               <td>Basic</td>
             </tr>
           
             <tr>
               <th>greenlet</th>
-              <td>1.1.3</td>
+              <td>2.0.2</td>
               <td>Basic</td>
             </tr>
           
@@ -4892,7 +4974,7 @@ IndexError: list index out of range</pre>
           
             <tr>
               <th>lxml</th>
-              <td>4.8.0</td>
+              <td>4.9.2</td>
               <td>Basic</td>
             </tr>
           
@@ -4903,14 +4985,14 @@ IndexError: list index out of range</pre>
             </tr>
           
             <tr>
-              <th>PyPDF2</th>
-              <td>2.10.9</td>
+              <th>pypdf</th>
+              <td>3.4.0</td>
               <td>Basic</td>
             </tr>
           
             <tr>
               <th>pytz</th>
-              <td>2022.2.1</td>
+              <td>2022.7.1</td>
               <td>Basic</td>
             </tr>
           
@@ -4922,25 +5004,25 @@ IndexError: list index out of range</pre>
           
             <tr>
               <th>SQLAlchemy</th>
-              <td>1.4.41</td>
+              <td>1.4.46</td>
               <td>Basic</td>
             </tr>
           
             <tr>
               <th>tornado</th>
-              <td>6.1</td>
+              <td>6.2</td>
               <td>Basic</td>
             </tr>
           
             <tr>
               <th>Unidecode</th>
-              <td>1.3.4</td>
+              <td>1.3.6</td>
               <td>Basic</td>
             </tr>
           
             <tr>
               <th>Wand</th>
-              <td>0.6.10</td>
+              <td>0.6.11</td>
               <td>Basic</td>
             </tr>
           
@@ -4952,13 +5034,13 @@ IndexError: list index out of range</pre>
           
             <tr>
               <th>google-api-python-client</th>
-              <td>2.62.0</td>
+              <td>2.77.0</td>
               <td>TestCliGdrivedb</td>
             </tr>
           
             <tr>
               <th>httplib2</th>
-              <td>0.20.4</td>
+              <td>0.21.0</td>
               <td>TestCliGdrivedb</td>
             </tr>
           
@@ -4970,7 +5052,7 @@ IndexError: list index out of range</pre>
           
             <tr>
               <th>PyDrive2</th>
-              <td>1.14.0</td>
+              <td>1.15.0</td>
               <td>TestCliGdrivedb</td>
             </tr>
           
@@ -4982,13 +5064,13 @@ IndexError: list index out of range</pre>
           
             <tr>
               <th>google-api-python-client</th>
-              <td>2.62.0</td>
+              <td>2.77.0</td>
               <td>TestEbookConvertCalibreGDrive</td>
             </tr>
           
             <tr>
               <th>httplib2</th>
-              <td>0.20.4</td>
+              <td>0.21.0</td>
               <td>TestEbookConvertCalibreGDrive</td>
             </tr>
           
@@ -5000,7 +5082,7 @@ IndexError: list index out of range</pre>
           
             <tr>
               <th>PyDrive2</th>
-              <td>1.14.0</td>
+              <td>1.15.0</td>
               <td>TestEbookConvertCalibreGDrive</td>
             </tr>
           
@@ -5012,13 +5094,13 @@ IndexError: list index out of range</pre>
           
             <tr>
               <th>google-api-python-client</th>
-              <td>2.62.0</td>
+              <td>2.77.0</td>
               <td>TestEbookConvertGDriveKepubify</td>
             </tr>
           
             <tr>
               <th>httplib2</th>
-              <td>0.20.4</td>
+              <td>0.21.0</td>
               <td>TestEbookConvertGDriveKepubify</td>
             </tr>
           
@@ -5030,7 +5112,7 @@ IndexError: list index out of range</pre>
           
             <tr>
               <th>PyDrive2</th>
-              <td>1.14.0</td>
+              <td>1.15.0</td>
               <td>TestEbookConvertGDriveKepubify</td>
             </tr>
           
@@ -5054,13 +5136,13 @@ IndexError: list index out of range</pre>
           
             <tr>
               <th>google-api-python-client</th>
-              <td>2.62.0</td>
+              <td>2.77.0</td>
               <td>TestEditAuthorsGdrive</td>
             </tr>
           
             <tr>
               <th>httplib2</th>
-              <td>0.20.4</td>
+              <td>0.21.0</td>
               <td>TestEditAuthorsGdrive</td>
             </tr>
           
@@ -5072,7 +5154,7 @@ IndexError: list index out of range</pre>
           
             <tr>
               <th>PyDrive2</th>
-              <td>1.14.0</td>
+              <td>1.15.0</td>
               <td>TestEditAuthorsGdrive</td>
             </tr>
           
@@ -5084,19 +5166,19 @@ IndexError: list index out of range</pre>
           
             <tr>
               <th>beautifulsoup4</th>
-              <td>4.11.1</td>
+              <td>4.11.2</td>
               <td>TestLoadMetadata</td>
             </tr>
           
             <tr>
               <th>google-api-python-client</th>
-              <td>2.62.0</td>
+              <td>2.77.0</td>
               <td>TestEditBooksOnGdrive</td>
             </tr>
           
             <tr>
               <th>httplib2</th>
-              <td>0.20.4</td>
+              <td>0.21.0</td>
               <td>TestEditBooksOnGdrive</td>
             </tr>
           
@@ -5108,7 +5190,7 @@ IndexError: list index out of range</pre>
           
             <tr>
               <th>PyDrive2</th>
-              <td>1.14.0</td>
+              <td>1.15.0</td>
               <td>TestEditBooksOnGdrive</td>
             </tr>
           
@@ -5120,25 +5202,25 @@ IndexError: list index out of range</pre>
           
             <tr>
               <th>beautifulsoup4</th>
-              <td>4.11.1</td>
+              <td>4.11.2</td>
               <td>TestLoadMetadataScholar</td>
             </tr>
           
             <tr>
               <th>scholarly</th>
-              <td>1.7.2</td>
+              <td>1.7.11</td>
               <td>TestLoadMetadataScholar</td>
             </tr>
           
             <tr>
               <th>google-api-python-client</th>
-              <td>2.62.0</td>
+              <td>2.77.0</td>
               <td>TestSetupGdrive</td>
             </tr>
           
             <tr>
               <th>httplib2</th>
-              <td>0.20.4</td>
+              <td>0.21.0</td>
               <td>TestSetupGdrive</td>
             </tr>
           
@@ -5150,7 +5232,7 @@ IndexError: list index out of range</pre>
           
             <tr>
               <th>PyDrive2</th>
-              <td>1.14.0</td>
+              <td>1.15.0</td>
               <td>TestSetupGdrive</td>
             </tr>
           
@@ -5168,19 +5250,19 @@ IndexError: list index out of range</pre>
           
             <tr>
               <th>python-Levenshtein</th>
-              <td>0.12.2</td>
+              <td>0.20.9</td>
               <td>TestGoodreads</td>
             </tr>
           
             <tr>
               <th>jsonschema</th>
-              <td>4.16.0</td>
+              <td>4.17.3</td>
               <td>TestKoboSync</td>
             </tr>
           
             <tr>
               <th>jsonschema</th>
-              <td>4.16.0</td>
+              <td>4.17.3</td>
               <td>TestKoboSyncBig</td>
             </tr>
           
@@ -5192,7 +5274,7 @@ IndexError: list index out of range</pre>
           
             <tr>
               <th>jsonschema</th>
-              <td>4.16.0</td>
+              <td>4.17.3</td>
               <td>TestLdapLogin</td>
             </tr>
           
@@ -5204,13 +5286,13 @@ IndexError: list index out of range</pre>
           
             <tr>
               <th>Flask-Dance</th>
-              <td>6.1.1</td>
+              <td>6.2.0</td>
               <td>TestOAuthLogin</td>
             </tr>
           
             <tr>
               <th>SQLAlchemy-Utils</th>
-              <td>0.38.3</td>
+              <td>0.39.0</td>
               <td>TestOAuthLogin</td>
             </tr>
           
@@ -5222,7 +5304,7 @@ IndexError: list index out of range</pre>
 </div>
 
 <script>
-    drawCircle(414, 1, 1, 7);
+    drawCircle(413, 3, 2, 7);
     showCase(5);
 </script>
 
