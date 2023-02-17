@@ -19,7 +19,7 @@ Calibre-Web is a web app providing a clean interface for browsing, reading and d
 - full graphical setup
 - User management with fine-grained per-user permissions
 - Admin interface
-- User Interface in brazilian, czech, dutch, english, finnish, french, galician, german, greek, hungarian, italian, japanese, khmer, korean, polish, russian, simplified and traditional chinese, spanish, swedish, turkish, ukrainian, vietnamese
+- User Interface in brazilian, czech, dutch, english, finnish, french, galician, german, greek, hungarian, indonesian, italian, japanese, khmer, korean, norwegian, polish, russian, simplified and traditional chinese, spanish, swedish, turkish, ukrainian, vietnamese
 - OPDS feed for eBook reader apps 
 - Filter and search by titles, authors, tags, series, book format and language
 - Create a custom book collection (shelves)
@@ -52,7 +52,8 @@ In the Wiki there are also examples for: a [manual installation](https://github.
 
 Point your browser to `http://localhost:8083` or `http://localhost:8083/opds` for the OPDS catalog \
 Login with default admin login \
-Set `Location of Calibre database` to the path of the folder where your Calibre library (metadata.db) lives, push "submit" button \
+If you don't have a Calibre database already, this [database](https://github.com/janeczku/calibre-web/blob/master/library/metadata.db) can be used. **IMPORTATNT** Please move the database out of the calibre-web folder structure, as it will be overwritten during update. \
+Set `Location of Calibre database` to the path of the folder where your Calibre library (metadata.db) lives, push "submit" button. \
 Optionally a Google Drive can be used to host the calibre library [-> Using Google Drive integration](https://github.com/janeczku/calibre-web/wiki/G-Drive-Setup#using-google-drive-integration) \
 Afterwards you can configure your Calibre-Web instance ([Basic Configuration](https://github.com/janeczku/calibre-web/wiki/Configuration#basic-configuration) and [UI Configuration](https://github.com/janeczku/calibre-web/wiki/Configuration#ui-configuration) on admin page)  
 
@@ -65,11 +66,14 @@ Afterwards you can configure your Calibre-Web instance ([Basic Configuration](ht
 
 python 3.5+
 
+[Download](https://imagemagick.org/script/download.php) Imagemagick to extract covers from epubs. On Windows the additional installation of [ghostscript](https://ghostscript.com/releases/gsdnld.html) might be necessary to extract covers from pdf files. On Linux Imagemagick and Ghostscript can often be installed using the system package manager.
+
 Optionally, to enable on-the-fly conversion from one ebook format to another when using the send-to-ereader feature, or during editing of ebooks metadata:
 
 [Download and install](https://calibre-ebook.com/download) the Calibre desktop program for your platform and enter the folder including program name (normally /opt/calibre/ebook-convert, or C:\Program Files\calibre\ebook-convert.exe) in the field "calibre's converter tool" on the setup page.
 
 [Download](https://github.com/pgaskin/kepubify/releases/latest) Kepubify tool for your platform and place the binary starting with `kepubify` in Linux: `/opt/kepubify` Windows: `C:\Program Files\kepubify`.
+
 
 ## Docker Images
 
