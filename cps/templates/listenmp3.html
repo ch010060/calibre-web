@@ -29,17 +29,14 @@
 </head>
 
 <body>
-  <div class="cover full-height">
-    <!-- Always use full-sized image for the detail page -->
-    <img id="detailcover" title="{{entry.title}}" src="{{url_for('web.get_cover', book_id=entry.id, resolution='og', c=entry|last_modified)}}" />
-  </div>
+  <div class="meta-wrap full-height">
+   
+    <div class="meta-cover">
+      <img id="detailcover" title="{{entry.title}}" src="{{url_for('web.get_cover', book_id=entry.id, resolution='og', c=entry|last_modified)}}" />
 
-  <div class="row" style="display: inline-block; width: 100%;">
-    <div class="col-sm-3 col-lg-3 col-xs-5">
-      
     </div>
-    <div class="col-sm-6 col-lg-6 book-meta" style="margin-bottom: 2%;">
-      <img id="detailcover" title="{{entry.title}}" src="{{url_for('web.get_cover', book_id=entry.id, resolution='og', c=entry|last_modified)}}" style="float: right; margin-top: 20px"/>
+
+    <div class="book-meta">
       <h2 id="title">{{entry.title}}</h2>
       <p class="author">
           {% for author in entry.ordered_authors %}
