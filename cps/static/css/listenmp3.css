@@ -1,8 +1,8 @@
 .full-height {
-    height: 100vh;
+    height: calc(100vh - 42px);
 }
 
-.cover #detailcover {
+.meta-cover #detailcover {
     -o-object-position: center top;
     object-position: center top;
     -o-object-fit: contain;
@@ -11,4 +11,19 @@
     height: 100%;
     margin: 0 auto;
     display: block;
+}
+
+.meta-wrap {
+     display: flex;
+     max-width: 1000px;
+     margin: 0 auto;
+}
+
+.meta-cover{
+    padding-left: 15px;
+    padding-right: 15px;
+}
+
+.book-meta{
+    overflow-y: scroll;
 }
