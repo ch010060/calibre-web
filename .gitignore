@@ -31,6 +31,7 @@ cps/cache
 .idea/
 *.bak
 *.log.*
+.key
 
 settings.yaml
 gdrive_credentials
