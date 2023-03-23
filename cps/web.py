@@ -159,7 +159,14 @@ def set_bookmark(book_id, book_format):
 @web.route("/ajax/toggleread/<int:book_id>", methods=['POST'])
 @login_required
 def toggle_read(book_id):
-    message = edit_book_read_status(book_id)
+    ub.session_commit("Set read status")
+    try:
+        read_status = request.form["read_status"]
+        if (read_status):
+            message = edit_book_read_status(book_id, read_status=True)
+    except:
+        message = edit_book_read_status(book_id)
+
     if message:
         return message, 400
     else:

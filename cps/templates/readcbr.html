@@ -202,7 +202,8 @@
       bookUrl: "{{ url_for('static', filename=comicfile) }}/",
       bookmarkUrl: "{{ url_for('web.set_bookmark', book_id=comicfile, book_format=extension.upper()) }}",
       bookmark: "{{ bookmark.bookmark_key if bookmark != None }}",
-      useBookmarks: "{{ g.user.is_authenticated | tojson }}"
+      useBookmarks: "{{ g.user.is_authenticated | tojson }}",
+      togglereadUrl: "{{ url_for('web.toggle_read', book_id=comicfile) }}"
     };
     if (calibre.useBookmarks) {
       currentImage = eval(calibre.bookmark);

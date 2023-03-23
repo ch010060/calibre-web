@@ -241,6 +241,11 @@ function scrollTocToActive() {
 function updatePage() {
     $(".page").text((currentImage + 1 ) + "/" + totalImages);
 
+    if(currentImage + 1 == totalImages){
+        // Mark as read at last page
+        setRead();
+    }
+
     // Mark the current page in the TOC
     $("#tocView a[data-page]")
         // Remove the currently active thumbnail
@@ -544,6 +549,21 @@ function keyHandler(evt) {
             //console.log('KeyCode', evt.keyCode);
             break;
     }
+}
+
+function setRead() {
+      // get csrf_token
+      let csrf_token = $("input[name='csrf_token']").val();
+      //This sends a read status update to calibreweb.
+      $.ajax(calibre.togglereadUrl, {
+        method: "post",
+        data: {
+          csrf_token: csrf_token,
+          read_status: true
+        }
+      }).fail(function (xhr, status, error) {
+        console.error(error);
+      });
 }
 
 function init(filename) {
