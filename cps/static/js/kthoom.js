@@ -264,6 +264,8 @@ function updatePage() {
 
     kthoom.setSettings();
     kthoom.saveSettings();
+
+    setBookmark();
 }
 
 function updateProgress(loadPercentage) {
