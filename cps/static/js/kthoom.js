@@ -71,7 +71,8 @@ var settings = {
     theme: "light",
     direction: 0, // 0 = Left to Right, 1 = Right to Left
     nextPage: 0, // 0 = Reset to Top, 1 = Remember Position
-    scrollbar: 1 // 0 = Hide Scrollbar, 1 = Show Scrollbar
+    scrollbar: 1, // 0 = Hide Scrollbar, 1 = Show Scrollbar
+    arrow: 1 // 0 = Hide Arrow, 1 = Show Arrow
 };
 
 kthoom.saveSettings = function() {
@@ -266,6 +267,15 @@ function updatePage() {
 
     $("body").toggleClass("dark-theme", settings.theme === "dark");
     $("#mainContent").toggleClass("disabled-scrollbar", settings.scrollbar === 0);
+
+    if(settings.arrow){
+        $("#left").show();
+        $("#right").show();
+    }
+    else{
+        $("#left").hide();
+        $("#right").hide();
+    }
 
     kthoom.setSettings();
     kthoom.saveSettings();

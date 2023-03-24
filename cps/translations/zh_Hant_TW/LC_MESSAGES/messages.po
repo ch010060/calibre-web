@@ -3021,6 +3021,10 @@ msgstr "顯示"
 msgid "Hide"
 msgstr "隱藏"
 
+#: cps/templates/readcbr.html:180
+msgid "Arrow"
+msgstr "翻頁箭頭"
+
 #: cps/templates/readdjvu.html:5
 msgid "DJVU Reader"
 msgstr "DJVU閱讀器"
