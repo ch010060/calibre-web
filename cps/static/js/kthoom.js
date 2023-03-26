@@ -591,6 +591,7 @@ function init(filename) {
     initProgressClick();
     document.body.className += /AppleWebKit/.test(navigator.userAgent) ? " webkit" : "";
     kthoom.loadSettings();
+    $("body").toggleClass("dark-theme", settings.theme === "dark");
     updateScale(true);
 
     $(document).keydown(keyHandler);
