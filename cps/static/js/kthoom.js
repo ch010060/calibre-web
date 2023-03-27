@@ -445,6 +445,8 @@ function showNextPage() {
     if (currentImage >= Math.max(totalImages, imageFiles.length)) {
         // Freeze on the current page.
         currentImage--;
+        // Close window at the end of the book
+        window.close();
     } else {
         updatePage();
         if (settings.nextPage === 0) {
