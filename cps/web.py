@@ -28,6 +28,7 @@ from flask import Blueprint, jsonify
 from flask import request, redirect, send_from_directory, make_response, flash, abort, url_for
 from flask import session as flask_session
 from flask_babel import gettext as _
+from flask_babel import lazy_gettext as N_
 from flask_babel import get_locale
 from flask_login import login_user, logout_user, login_required, current_user
 from sqlalchemy.exc import IntegrityError, InvalidRequestError, OperationalError
@@ -54,6 +55,10 @@ from .usermanagement import login_required_if_no_ano
 from .kobo_sync_status import remove_synced_book
 from .render_template import render_title_template
 from .kobo_sync_status import change_archived_books
+
+from markupsafe import escape  # dependency of flask
+from .services.worker import WorkerThread
+from .tasks.read import TaskRead
 
 feature_support = {
     'ldap': bool(services.ldap),
@@ -1475,6 +1480,12 @@ def read_book(book_id, book_format):
         bookmark = ub.session.query(ub.Bookmark).filter(and_(ub.Bookmark.user_id == int(current_user.id),
                                                              ub.Bookmark.book_id == book_id,
                                                              ub.Bookmark.format == book_format.upper())).first()
+
+
+    link = '<a href="{}">{}</a>'.format(url_for('web.show_book', book_id=book.id), escape(book.title))
+    read_text = N_(u"%(book)s", book=link)
+    WorkerThread.add(current_user.name, TaskRead(read_text, escape(book.title)))
+
     if book_format.lower() == "epub":
         log.debug(u"Start epub reader for %d", book_id)
         return render_title_template('read.html', bookid=book_id, title=book.title, bookmark=bookmark)
