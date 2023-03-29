@@ -433,3 +433,7 @@ div.log {
 #detailcover:-moz-full-screen { cursor:zoom-out; border: 0; }
 #detailcover:-ms-fullscreen { cursor:zoom-out; border: 0; }
 #detailcover:fullscreen { cursor:zoom-out; border: 0; }
+
+.hover_img a { position:relative; }
+.hover_img a span { position:absolute; display:none; z-index:99; }
+.hover_img a:hover span { display:block; }

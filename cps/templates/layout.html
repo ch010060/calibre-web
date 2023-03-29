@@ -209,4 +209,19 @@
     {% endif %}
     {% block js %}{% endblock %}
   </body>
+<script>
+    function changeViewList(){
+        $("#row-grid").hide();
+        $("#row-list").show();
+        $("#list-button").hide();
+        $("#grid-button").show();
+    }
+
+    function changeViewGrid(){
+        $("#row-list").hide();
+        $("#row-grid").show();
+        $("#grid-button").hide();
+        $("#list-button").show();
+    }
+</script>
 </html>

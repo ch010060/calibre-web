@@ -29,8 +29,10 @@
       <a id="desc" data-toggle="tooltip" title="{{_('Sort title in reverse alphabetical order')}}" class="btn btn-primary{% if order == "zyx" %} active{% endif%}" href="{{url_for('web.books_list', data='author', book_id=id, sort_param='zyx')}}"><span class="glyphicon glyphicon-font"></span><span class="glyphicon glyphicon-sort-by-alphabet-alt"></span></a>
       <a id="pub_new" data-toggle="tooltip" title="{{_('Sort according to publishing date, newest first')}}" class="btn btn-primary{% if order == "pubnew" %} active{% endif%}" href="{{url_for('web.books_list', data='author', book_id=id, sort_param='pubnew')}}"><span class="glyphicon glyphicon-calendar"></span><span class="glyphicon glyphicon-sort-by-order"></span></a>
       <a id="pub_old" data-toggle="tooltip" title="{{_('Sort according to publishing date, oldest first')}}" class="btn btn-primary{% if order == "pubold" %} active{% endif%}" href="{{url_for('web.books_list', data='author', book_id=id, sort_param='pubold')}}"><span class="glyphicon glyphicon-calendar"></span><span class="glyphicon glyphicon-sort-by-order-alt"></span></a>
+      <div class="update-view-author btn btn-primary" id="list-button" onclick="changeViewList()">LIST</div>
+      <div class="update-view-author btn btn-primary" id="grid-button" onclick="changeViewGrid()" style="display:none">GRID</div>
     </div>
-  <div class="row display-flex">
+  <div class="row display-flex" id="row-grid">
     {% for entry in entries %}
     <div id="books" class="col-sm-3 col-lg-2 col-xs-6 book">
       <div class="cover">
@@ -91,6 +93,92 @@
       </div>
     </div>
     {% endfor %}
+  </div>
+
+  <div class="row display-flex" id="row-list" style="display: none">
+    <table id="books-table" class="table table-no-bordered table-bordered table-hover">
+      <thead>
+      <tr>
+      <td>{{_('Title')}}</td>
+      <td>{{_('Authors')}}</td>
+      <td>{{_('Series')}}</td>
+      <td>{{_('Ratings')}}</td>
+      <td>{{_('Read Status')}}</td>
+      </tr>
+    {% for entry in entries %}
+      <tr>
+      <div class="meta">
+        <td>
+        <div class="hover_img">
+        <a href="{{ url_for('web.show_book', book_id=entry.Books.id) }}" {% if simple==false %}data-toggle="modal" data-target="#bookDetailsModal" data-remote="false"{% endif %}>
+          <p title="{{ entry.Books.title }}" class="title">{{entry.Books.title}}</p>
+          <span class="img" title="{{ entry.Books.title }}">{{ image.book_cover(entry.Books) }}</span>
+        </a>
+        </div>
+        </td>
+        <td>
+        <p class="author">
+          {% for author in entry.Books.authors %}
+            {% if loop.index > g.config_authors_max and g.config_authors_max != 0 %}
+              {% if not loop.first %}
+                <span class="author-hidden-divider">&amp;</span>
+			  {% endif %}
+              <a class="author-name author-hidden" href="{{url_for('web.books_list',  data='author', sort_param='stored', book_id=author.id) }}">{{author.name.replace('|',',')}}</a>
+              {% if loop.last %}
+                <a href="#" class="author-expand" data-authors-max="{{g.config_authors_max}}" data-collapse-caption="({{_('reduce')}})">(...)</a>
+              {% endif %}
+            {% else %}
+              {% if not loop.first %}
+                <span>&amp;</span>
+              {% endif %}
+              <a class="author-name" href="{{url_for('web.books_list',  data='author', sort_param='stored', book_id=author.id) }}">{{author.name.replace('|',',')}}</a>
+            {% endif %}
+          {% endfor %}
+          {% for format in entry.Books.data %}
+            {% if format.format|lower in g.constants.EXTENSIONS_AUDIO %}
+            <span class="glyphicon glyphicon-music"></span>
+            {% endif %}
+          {% endfor %}
+        </p>
+        </td>
+        <td>
+        {% if entry.Books.series.__len__() > 0 %}
+        <p class="series">
+          <a href="{{url_for('web.books_list', data='series', sort_param='stored', book_id=entry.Books.series[0].id )}}">
+            {{entry.Books.series[0].name}}
+          </a>
+          ({{entry.Books.series_index|formatseriesindex}})
+        </p>
+        {% endif %}
+        </td>
+        <td>
+        {% if entry.Books.ratings.__len__() > 0 %}
+        <div class="rating">
+          {% for number in range((entry.Books.ratings[0].rating/2)|int(2)) %}
+          <span class="glyphicon glyphicon-star good"></span>
+          {% if loop.last and loop.index < 5 %}
+          {% for numer in range(5 - loop.index) %}
+          <span class="glyphicon glyphicon-star-empty"></span>
+          {% endfor %}
+          {% endif %}
+          {% endfor %}
+        </div>
+        {% endif %}
+        </td>
+        <td>
+        <div>
+        {% if entry[2] == True %}
+        <span class="glyphicon glyphicon-ok"></span>
+        {% else %}
+        <span class="glyphicon glyphicon-remove"></span>
+        {% endif %}
+        </div>
+        </td>
+      </div>
+      </tr>
+    {% endfor %}
+     </thead>
+    </table>
   </div>
 </div>
 
