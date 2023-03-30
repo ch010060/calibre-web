@@ -152,11 +152,21 @@
           {% if pagination and (pagination.has_next or pagination.has_prev) %}
             <div class="pagination">
               {% if pagination.has_prev %}
-              <li class="page-item page-previous"><a class="page-link" aria-label="next page" href="{{ (pagination.page - 1)|url_for_other_page
-                }}">&laquo; {{_('Previous')}}</a></li>
+              <li class="page-list"><a class="page-link" aria-label="next page" href="{{ (pagination.page - 1)|url_for_other_page
+                }}">&laquo; {{_('Previous Page')}}</a></li>
               {% endif %}
             {% for page in pagination.iter_pages() %}
               {% if page %}
+                {% if page <= 5 or (page > 5 and page == pagination.total_count) %}
+                    {% if page > 5 and page != 6 and page == pagination.total_count %}
+                    <li class="page-list"><a>...</a></li>
+                    {% endif %}
+                    {% if page == pagination.page %}
+                    <li class="page-list active"><a>{{ page }}</a></li>
+                    {% else %}
+                    <li class="page-list"><a href="{{ (page)|url_for_other_page }}">{{ page }}</a></li>
+                    {% endif %}
+                {% endif %}
                 {% if page != pagination.page %}
                   <li class="page-item"><a class="page-link" aria-label="to page {{ page }}" href="{{ (page)|url_for_other_page }}">{{ page }}</a></li>
                 {% else %}
@@ -167,8 +177,8 @@
               {% endif %}
             {% endfor %}
             {% if pagination.has_next %}
-              <li class="page-item page-next"><a class="page-link next" aria-label="next page" href="{{ (pagination.page + 1)|url_for_other_page
-                }}">{{_('Next')}} &raquo;</a></li>
+              <li class="page-list"><a class="page-link next" aria-label="next page" href="{{ (pagination.page + 1)|url_for_other_page
+                }}">{{_('Next Page')}} &raquo;</a></li>
             {% endif %}
             </div>
           {% endif %}

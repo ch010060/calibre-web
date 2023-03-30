@@ -1977,6 +1977,17 @@ body > div.container-fluid > div > div.col-sm-10 > div.pagination > .page-item:n
     display: none
 }
 
+body > div.container-fluid > div > div.col-sm-10 > div.pagination > .page-list > a {
+    margin-top: 10px;
+    display: block !important;
+}
+
+body > div.container-fluid > div > div.col-sm-10 > div.pagination > .page-list.active > a {
+    color: #ffffff;
+    margin-top: 10px;
+    display: block !important;
+}
+
 body > div.container-fluid > div > div.col-sm-10 > div.pagination > .page-next > a,
 body > div.container-fluid > div > div.col-sm-10 > div.pagination > .page-previous > a {
     color: transparent;
