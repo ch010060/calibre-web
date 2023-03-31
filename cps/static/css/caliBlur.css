@@ -2040,10 +2040,18 @@ body > div.container-fluid > div > div.col-sm-10 > div.pagination > .page-previo
 }
 
 .pagination > .navbar-left > .query {
-    height:40px;
-    width: 80%;
-    margin-right: 100px;
-    line-height: 60px
+    display: none;
+}
+
+@media only screen and (min-width: 768px) {
+    .pagination > .navbar-left > .query {
+        display: block;
+        height:40px;
+        width: 80%;
+        margin-top: 10px;
+        margin-right: 80px;
+        line-height: 60px
+    }
 }
 
 body.authorlist > div.container-fluid > div > div.col-sm-10 > div.container > div.col-xs-12, body.catlist > div.container-fluid > div > div.col-sm-10 > div.container > div.col-xs-12, body.langlist > div.container-fluid > div > div.col-sm-10 > div.container > div.col-sm-6, body.serieslist > div.container-fluid > div > div.col-sm-10 > div.container > div.col-sm-6 {

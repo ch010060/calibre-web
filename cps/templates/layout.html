@@ -155,9 +155,9 @@
                 </form>
 
                 {% if pagination.has_prev %}
-                <li class="page-list"><a class="page-link" aria-label="next page" href="{{ (pagination.page - 1)|url_for_other_page }}">&laquo; {{_('Previous Page')}}</a></li>
+                <li class="page-list"><a class="page-link" aria-label="next page" href="{{ (pagination.page - 1)|url_for_other_page }}">&laquo;</a></li>
                 {% else %}
-                <li class="page-list disabled"><a class="page-link" aria-label="next page" href="">&laquo; {{_('Previous Page')}}</a></li>
+                <li class="page-list disabled"><a class="page-link" aria-label="next page" href="">&laquo;</a></li>
                 {% endif %}
 
                 {% for page in pagination.iter_pages(1,1,3,1) %}
@@ -173,9 +173,9 @@
                 {% endfor %}
 
                 {% if pagination.has_next %}
-                <li class="page-list"><a class="page-link next" aria-label="next page" href="{{ (pagination.page + 1)|url_for_other_page }}">{{_('Next Page')}} &raquo;</a></li>
+                <li class="page-list"><a class="page-link next" aria-label="next page" href="{{ (pagination.page + 1)|url_for_other_page }}">&raquo;</a></li>
                 {% else %}
-                <li class="page-list disabled"><a class="page-link next" aria-label="next page" href="">{{_('Next Page')}} &raquo;</a></li>
+                <li class="page-list disabled"><a class="page-link next" aria-label="next page" href="">&raquo;</a></li>
                 {% endif %}
             </div>
           {% endif %}
