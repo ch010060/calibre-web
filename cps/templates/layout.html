@@ -142,7 +142,6 @@
                 <li id="nav_about" {% if page == 'stat' %}class="active"{% endif %}><a href="{{url_for('about.stats')}}"><span class="glyphicon glyphicon-info-sign"></span> {{_('About')}}</a></li>
               {% endif %}
               {% endif %}
-
             </ul>
           </nav>
         </div>
@@ -151,9 +150,14 @@
           {% block body %}{% endblock %}
           {% if pagination and (pagination.has_next or pagination.has_prev) %}
             <div class="pagination">
+              <form class="navbar-left" role="search" onsubmit="return gotoPage(this.toPageNum.value);">
+                      <input class="query" id="toPageNum" type="number" step="1" min="1" max="{{ pagination.total_count }}" placeholder="{{_('Goto')}}" value="{{searchterm}}">
+              </form>
               {% if pagination.has_prev %}
               <li class="page-list"><a class="page-link" aria-label="next page" href="{{ (pagination.page - 1)|url_for_other_page
                 }}">&laquo; {{_('Previous Page')}}</a></li>
+              {% else %}
+              <li class="page-list disabled"><a class="page-link" aria-label="next page" href="">&laquo; {{_('Previous Page')}}</a></li>
               {% endif %}
             {% for page in pagination.iter_pages() %}
               {% if page %}
@@ -162,9 +166,9 @@
                     <li class="page-list"><a>...</a></li>
                     {% endif %}
                     {% if page == pagination.page %}
-                    <li class="page-list active"><a>{{ page }}</a></li>
+                    <li class="page-list active"><a id="page-list-{{ page }}" href="{{ (page)|url_for_other_page }}">{{ page }}</a></li>
                     {% else %}
-                    <li class="page-list"><a href="{{ (page)|url_for_other_page }}">{{ page }}</a></li>
+                    <li class="page-list"><a id="page-list-{{ page }}" href="{{ (page)|url_for_other_page }}">{{ page }}</a></li>
                     {% endif %}
                 {% endif %}
                 {% if page != pagination.page %}
@@ -179,6 +183,8 @@
             {% if pagination.has_next %}
               <li class="page-list"><a class="page-link next" aria-label="next page" href="{{ (pagination.page + 1)|url_for_other_page
                 }}">{{_('Next Page')}} &raquo;</a></li>
+            {% else %}
+              <li class="page-list disabled"><a class="page-link next" aria-label="next page" href="">{{_('Next Page')}} &raquo;</a></li>
             {% endif %}
             </div>
           {% endif %}
@@ -232,6 +238,27 @@
         $("#row-grid").show();
         $("#grid-button").hide();
         $("#list-button").show();
+    }
+
+    function gotoPage(page){
+        var link = document.getElementById("page-list-2").href;
+
+        if(link){
+            const regex_data = /\/\d\?data=/i;
+            const regex_query = /\/\d\?query=/i;
+            const regex_order = /\/order\/\d$/i;
+            const regex_common = /\/\d$/i;
+
+            if(!isNaN(parseInt(page))){
+                link = link.replace(regex_data, "/"+page+"?data=");
+                link = link.replace(regex_query, "/"+page+"?query=");
+                link = link.replace(regex_order, "/order/"+page);
+                link = link.replace(regex_common, "/"+page);
+
+                location.href = link;
+            }
+        }
+        return false;
     }
 </script>
 </html>

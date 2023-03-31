@@ -1982,10 +1982,15 @@ body > div.container-fluid > div > div.col-sm-10 > div.pagination > .page-list >
     display: block !important;
 }
 
+body > div.container-fluid > div > div.col-sm-10 > div.pagination > .page-list.disabled > a {
+    pointer-events: none
+}
+
 body > div.container-fluid > div > div.col-sm-10 > div.pagination > .page-list.active > a {
     color: #ffffff;
     margin-top: 10px;
     display: block !important;
+    pointer-events: none
 }
 
 body > div.container-fluid > div > div.col-sm-10 > div.pagination > .page-next > a,
@@ -2027,6 +2032,18 @@ body > div.container-fluid > div > div.col-sm-10 > div.pagination > .page-previo
 
 .pagination > .ellipsis, .pagination > a:nth-last-of-type(2) {
     display: none
+}
+
+.pagination > .navbar-left {
+    color: #000000;
+    width: 20%
+}
+
+.pagination > .navbar-left > .query {
+    height:40px;
+    width: 80%;
+    margin-right: 100px;
+    line-height: 60px
 }
 
 body.authorlist > div.container-fluid > div > div.col-sm-10 > div.container > div.col-xs-12, body.catlist > div.container-fluid > div > div.col-sm-10 > div.container > div.col-xs-12, body.langlist > div.container-fluid > div > div.col-sm-10 > div.container > div.col-sm-6, body.serieslist > div.container-fluid > div > div.col-sm-10 > div.container > div.col-sm-6 {
