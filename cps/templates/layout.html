@@ -232,7 +232,8 @@
     }
 
     function gotoPage(page){
-        var link = document.getElementById("page-list-{{ pagination.pages }}").href;
+        var maxPage = document.getElementById("toPageNum").max;
+        var link = document.getElementById("page-list-"+maxPage).href;
 
         if(link){
             const regex_data = /\/\d+\?data=/i;
