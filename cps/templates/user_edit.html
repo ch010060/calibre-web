@@ -48,6 +48,12 @@
             {% endfor %}
         </select>
     </div>
+
+    <div class="form-group">
+      <label for="preferred_tags">{{_('Prefer Tags')}}</label>
+      <input type="string" class="form-control" name="preferred_tags" id="preferred_tags" value="{{ content.preferred_tags if content.preferred_tags != None }}">
+    </div>
+
     {% if registered_oauth.keys()| length > 0 and not new_user and profile %}
       {% for id, name in registered_oauth.items() %}
     <div class="form-group">

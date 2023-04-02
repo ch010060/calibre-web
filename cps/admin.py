@@ -528,6 +528,8 @@ def edit_list_user(param):
                         user.default_language = vals['value']
                     else:
                         raise Exception(_("No Valid Book Language Given"))
+                elif param == 'preferred_tags':
+                    user.preferred_tags = vals['value']
                 else:
                     return _("Parameter not found"), 400
         except Exception as ex:
@@ -1253,6 +1255,7 @@ def new_user():
         content.sidebar_view = config.config_default_show
         content.locale = config.config_default_locale
         content.default_language = config.config_default_language
+        content.preferred_tags = config.config_preferred_tags
     return render_title_template("user_edit.html", new_user=1, content=content,
                                  config=config, translations=translations,
                                  languages=languages, title=_(u"Add new user"), page="newuser",
@@ -1579,6 +1582,7 @@ def ldap_import_create_user(user, user_data):
     content.sidebar_view = config.config_default_show
     content.allowed_tags = config.config_allowed_tags
     content.denied_tags = config.config_denied_tags
+    content.preferred_tags = config.config_preferred_tags
     content.allowed_column_value = config.config_allowed_column_value
     content.denied_column_value = config.config_denied_column_value
     ub.session.add(content)
@@ -1876,6 +1880,8 @@ def _handle_new_user(to_save, content, languages, translations, kobo_support):
         if config.config_public_reg and not check_valid_domain(content.email):
             log.info("E-mail: {} for new user is not from valid domain".format(content.email))
             raise Exception(_(u"E-mail is not from valid domain"))
+        if to_save.get("preferred_tags"):
+            content.preferred_tags = to_save["preferred_tags"]
     except Exception as ex:
         flash(str(ex), category="error")
         return render_title_template("user_edit.html", new_user=1, content=content,
@@ -1985,6 +1991,8 @@ def _handle_edit_user(to_save, content, languages, translations, kobo_support):
             content.default_language = to_save["default_language"]
         if to_save.get("locale"):
             content.locale = to_save["locale"]
+        if to_save.get("preferred_tags"):
+            content.preferred_tags = to_save["preferred_tags"]
         try:
             new_email = valid_email(to_save.get("email", content.email))
             if not new_email:

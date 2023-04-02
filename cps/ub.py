@@ -239,6 +239,7 @@ class User(UserBase, Base):
     default_language = Column(String(3), default="all")
     denied_tags = Column(String, default="")
     allowed_tags = Column(String, default="")
+    preferred_tags = Column(String, default="")
     denied_column_value = Column(String, default="")
     allowed_column_value = Column(String, default="")
     remote_auth_token = relationship('RemoteAuthToken', backref='user', lazy='dynamic')
@@ -281,6 +282,7 @@ class Anonymous(AnonymousUserMixin, UserBase):
         self.kindle_mail = data.kindle_mail
         self.denied_tags = data.denied_tags
         self.allowed_tags = data.allowed_tags
+        self.preferred_tags = data.preferred_tags
         self.denied_column_value = data.denied_column_value
         self.allowed_column_value = data.allowed_column_value
         self.view_settings = data.view_settings
@@ -725,17 +727,18 @@ def migrate_Database(_session):
                      "default_language VARCHAR(3),"                     
                      "denied_tags VARCHAR,"
                      "allowed_tags VARCHAR,"
+                     "preferred_tags VARCHAR,"
                      "denied_column_value VARCHAR,"
                      "allowed_column_value VARCHAR,"
                      "view_settings JSON,"
                      "kobo_only_shelves_sync SMALLINT,"                              
                      "UNIQUE (name),"
                      "UNIQUE (email))"))
-            conn.execute(text("INSERT INTO user_id(id, name, email, role, password, kindle_mail,locale,"
-                     "sidebar_view, default_language, denied_tags, allowed_tags, denied_column_value, "
+            conn.execute(text("INSERT INTO user_id(id, name, email, role, password, kindle_mail, locale,"
+                     "sidebar_view, default_language, denied_tags, allowed_tags, preferred_tags, denied_column_value, "
                      "allowed_column_value, view_settings, kobo_only_shelves_sync)"
                      "SELECT id, nickname, email, role, password, kindle_mail, locale,"
-                     "sidebar_view, default_language, denied_tags, allowed_tags, denied_column_value, "
+                     "sidebar_view, default_language, denied_tags, allowed_tags, preferred_tags, denied_column_value, "
                      "allowed_column_value, view_settings, kobo_only_shelves_sync FROM user"))
             # delete old user table and rename new user_id table to user:
             conn.execute(text("DROP TABLE user"))

@@ -1385,6 +1385,7 @@ def change_profile(kobo_support, local_oauth_check, oauth_status, translations, 
             if to_save.get("name", current_user.name) != current_user.name:
                 # Query username, if not existing, change
                 current_user.name = check_username(to_save.get("name"))
+        current_user.preferred_tags = to_save.get("preferred_tags")
         current_user.random_books = 1 if to_save.get("show_random") == "on" else 0
         current_user.default_language = to_save.get("default_language", "all")
         current_user.locale = to_save.get("locale", "en")

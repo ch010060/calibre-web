@@ -97,6 +97,7 @@ class _Settings(_Base):
 
     config_denied_tags = Column(String, default="")
     config_allowed_tags = Column(String, default="")
+    config_preferred_tags = Column(String, default="")
     config_restricted_column = Column(SmallInteger, default=0)
     config_denied_column_value = Column(String, default="")
     config_allowed_column_value = Column(String, default="")

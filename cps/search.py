@@ -371,7 +371,7 @@ def render_prepare_search_form(cc):
     else:
         languages = None
     return render_title_template('search_form.html', tags=tags, languages=languages, extensions=extensions,
-                                 series=series,shelves=shelves, title=_(u"Advanced Search"), cc=cc, page="advsearch")
+                                 series=series,shelves=shelves, title=_(u"Advanced Search"), cc=cc, page="advsearch",preferred_tags=current_user.preferred_tags)
 
 
 def render_search_results(term, offset=None, order=None, limit=None):
