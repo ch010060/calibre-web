@@ -169,6 +169,24 @@
                   </div>
                 </td>
               </tr>
+              <tr>
+                <th>{{_('Wheel Flip')}}:</th>
+                <td>
+                  <div class="inputs">
+                <label for="yWheelFlip"><input type="radio" id="yWheelFlip" name="wheelflip" value="1" /> {{_('Yes')}}</label>
+                <label for="nWheelFlip"><input type="radio" id="nWheelFlip" name="wheelflip" value="0" /> {{_('No')}}</label>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <th>{{_('Auto Close')}}:</th>
+                <td>
+                  <div class="inputs">
+                <label for="yAutoClose"><input type="radio" id="yAutoClose" name="autoClose" value="1" /> {{_('Yes')}}</label>
+                <label for="nAutoClose"><input type="radio" id="nAutoClose" name="autoClose" value="0" /> {{_('No')}}</label>
+                  </div>
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -238,7 +256,7 @@
 
       // deltaY obviously records vertical scroll, deltaX and deltaZ exist too.
       // this condition makes sure it's vertical scrolling that happened
-      if(event.originalEvent.deltaY !== 0){
+      if(event.originalEvent.deltaY !== 0 && settings.wheelflip){
 
         if(event.originalEvent.deltaY < 0){
           // wheeled up

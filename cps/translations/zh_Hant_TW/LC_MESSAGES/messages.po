@@ -3025,6 +3025,14 @@ msgstr "隱藏"
 msgid "Arrow"
 msgstr "翻頁箭頭"
 
+#: cps/templates/readcbr.html:185
+msgid "Wheel Flip"
+msgstr "滾輪翻頁"
+
+#: cps/templates/readcbr.html:190
+msgid "Auto Close"
+msgstr "自動關閉"
+
 #: cps/templates/readdjvu.html:5
 msgid "DJVU Reader"
 msgstr "DJVU閱讀器"

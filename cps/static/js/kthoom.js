@@ -72,7 +72,9 @@ var settings = {
     direction: 0, // 0 = Left to Right, 1 = Right to Left
     nextPage: 0, // 0 = Reset to Top, 1 = Remember Position
     scrollbar: 1, // 0 = Hide Scrollbar, 1 = Show Scrollbar
-    arrow: 1 // 0 = Hide Arrow, 1 = Show Arrow
+    arrow: 1, // 0 = Hide Arrow, 1 = Show Arrow
+    wheelflip: 0, // 0 = Disable wheel flip, 1 = Enable wheel flip
+    autoClose: 0 // 0 = Disable auto close, 1 = Enable auto close
 };
 
 kthoom.saveSettings = function() {
@@ -446,7 +448,9 @@ function showNextPage() {
         // Freeze on the current page.
         currentImage--;
         // Close window at the end of the book
-        window.close();
+        if(settings.autoClose){
+            window.close();
+        }
     } else {
         updatePage();
         if (settings.nextPage === 0) {
