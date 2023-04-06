@@ -2379,6 +2379,18 @@ msgstr "標準主題"
 msgid "caliBlur! Dark Theme"
 msgstr "黑暗主題"
 
+#: cps/templates/readcbr.html:118
+msgid "Display"
+msgstr "顯示"
+
+#: cps/templates/readcbr.html:121
+msgid "Single Page"
+msgstr "單頁"
+
+#: cps/templates/readcbr.html:122
+msgid "Long Strip"
+msgstr "長條"
+
 #: cps/templates/config_view_edit.html:47
 msgid "Regular Expression for Ignoring Columns"
 msgstr "可忽略的自定義欄位（正則表達式）"
@@ -2924,6 +2936,14 @@ msgstr "上一頁"
 #: cps/templates/readcbr.html:93 cps/templates/readcbr.html:162
 msgid "Next Page"
 msgstr "下一頁"
+
+#: cps/templates/readcbr.html:92
+msgid "Single Page Display"
+msgstr "單頁顯示"
+
+#: cps/templates/readcbr.html:93
+msgid "Long Strip Display"
+msgstr "長條顯示"
 
 #: cps/templates/readcbr.html:94
 msgid "Scale to Best"
