@@ -763,7 +763,7 @@ function init(filename) {
             showRightPage();
         },
     });
-    $(".mainImage").click(function(evt) {
+    $("#mainContent").click(function(evt) {
         // Firefox does not support offsetX/Y so we have to manually calculate
         // where the user clicked in the image.
         var mainContentWidth = $("#mainContent").width();
@@ -777,25 +777,56 @@ function init(filename) {
 
         // Determine if the user clicked/tapped the left side or the
         // right side of the page.
+        // 1. flip left/right in single page mode
+        // 2. flip up/down in long-strip page mode
         var clickedLeft = false;
         switch (settings.rotateTimes) {
             case 0:
-                clickedLeft = clickX < (comicWidth / 2);
+                if(settings.pageDisplay === 0) {
+                    clickedLeft = clickX < (comicWidth / 2);
+                }
+                else {
+                    clickedLeft = clickY < (comicWidth / 2);
+                }
                 break;
             case 1:
-                clickedLeft = clickY < (comicHeight / 2);
+                if(settings.pageDisplay === 0) {
+                    clickedLeft = clickY < (comicHeight / 2);
+                }
+                else {
+                    clickedLeft = clickX > (comicHeight / 2);
+                }
                 break;
             case 2:
-                clickedLeft = clickX > (comicWidth / 2);
+                if(settings.pageDisplay === 0) {
+                    clickedLeft = clickX > (comicWidth / 2);
+                }
+                else {
+                    clickedLeft = clickY > (comicWidth / 2);
+                }
                 break;
             case 3:
-                clickedLeft = clickY > (comicHeight / 2);
+                if(settings.pageDisplay === 0) {
+                    clickedLeft = clickY > (comicHeight / 2);
+                }
+                else {
+                    clickedLeft = clickX < (comicHeight / 2);
+                }
                 break;
         }
-        if (clickedLeft) {
-            showLeftPage();
-        } else {
-            showRightPage();
+        if(settings.pageDisplay === 0) {
+            if (clickedLeft) {
+                showLeftPage();
+            } else {
+                showRightPage();
+            }
+        }
+        else {
+            if (clickedLeft) {
+                showPrevPage();
+            } else {
+                showNextPage();
+            }
         }
     });
 
