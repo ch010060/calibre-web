@@ -922,6 +922,25 @@ def do_download_file(book, book_format, client, data, headers):
         # ToDo Check headers parameter
         for element in headers:
             response.headers[element[0]] = element[1]
+
+        file_name = book.title
+        file_author = ""
+        file_publisher = ""
+        for i in range(len(book.authors)):
+            file_author = file_author + "," + book.authors[i].name
+        file_author = file_author[1:]
+        for i in range(len(book.publishers)):
+            file_publisher = file_publisher + "," + book.publishers[i].name
+        file_publisher = file_publisher[1:]
+
+        if file_publisher:
+            file_name = "[" + file_publisher + " (" + file_author + ")] " + file_name
+        else:
+            file_name = "[" + file_author + "] " + file_name
+
+        file_name = get_valid_filename(file_name, replace_whitespace=False)
+        response.headers["Content-Disposition"] = "attachment; filename=%s.%s; filename*=UTF-8''%s.%s" % (
+            quote(file_name.encode('utf-8')), book_format, quote(file_name.encode('utf-8')), book_format)
         log.info('Downloading file: {}'.format(os.path.join(filename, data.name + "." + book_format)))
         return response
 
