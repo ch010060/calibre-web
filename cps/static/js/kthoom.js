@@ -163,6 +163,9 @@ kthoom.ImageFile = function(file) {
         case "webp":
             this.mimeType = "image/webp";
             break;
+        case "avif":
+            this.mimeType = "image/avif";
+            break;
         default:
             this.mimeType = undefined;
             break;
@@ -370,7 +373,7 @@ function setImage(url, _canvas) {
                     $("#mainText").innerHTML("<iframe style=\"width:100%;height:700px;border:0\" src=\"data:text/html," + escape(xhr.responseText) + "\"></iframe>");
                 };
                 xhr.send(null);
-            } else if (!/(jpg|jpeg|png|gif|webp)$/.test(imageFiles[currentImage].filename) && imageFiles[currentImage].data.uncompressedSize < 10 * 1024) {
+            } else if (!/(jpg|jpeg|png|gif|webp|avif)$/.test(imageFiles[currentImage].filename) && imageFiles[currentImage].data.uncompressedSize < 10 * 1024) {
                 xhr.open("GET", url, true);
                 xhr.onload = function() {
                     $("#mainText").css("display", "");
