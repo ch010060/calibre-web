@@ -489,36 +489,76 @@ function setImage(url, _canvas, onRendered) {
             }
         };
         img.onload = function() {
-            var h = img.height,
-                w = img.width,
-                sw = w,
-                sh = h;
-            settings.rotateTimes =  (4 + settings.rotateTimes) % 4;
+            var imgW = img.width,
+                imgH = img.height;
+
+            // Normalize rotation
+            settings.rotateTimes = (4 + settings.rotateTimes) % 4;
+
+            // Natural rotated dimensions
+            var natW = (settings.rotateTimes % 2 === 1) ? imgH : imgW;
+            var natH = (settings.rotateTimes % 2 === 1) ? imgW : imgH;
+
+            // Container and constraints
+            var containerW = $("#mainContent").width() || innerWidth;
+            var containerH = innerHeight - 50;
+
+            // Compute target scale based on fit mode
+            var scale = 1;
+            switch (settings.fitMode) {
+                case kthoom.Key.W: // fit width
+                    scale = containerW / natW; break;
+                case kthoom.Key.H: // fit height
+                    scale = containerH / natH; break;
+                case kthoom.Key.B: // best (fit both)
+                    scale = Math.min(containerW / natW, containerH / natH); break;
+                case kthoom.Key.N: // native: avoid upscaling, but clamp to container to prevent huge canvases
+                default:
+                    scale = Math.min(1, Math.min(containerW / natW, containerH / natH));
+                    break;
+            }
+            if (!isFinite(scale) || scale <= 0) scale = 1;
+
+            // Target display size
+            var targetW = Math.max(1, Math.floor(natW * scale));
+            var targetH = Math.max(1, Math.floor(natH * scale));
+
+            // Clamp to safe canvas limits (iOS/Safari sensitive)
+            var EDGE_LIMIT = 8192; // conservative
+            var PIXEL_LIMIT = 16777216; // ~16MP
+            var factor = Math.min(EDGE_LIMIT / targetW, EDGE_LIMIT / targetH, Math.sqrt(PIXEL_LIMIT / (targetW * targetH)));
+            if (!isFinite(factor)) factor = 1;
+            if (factor < 1) {
+                targetW = Math.max(1, Math.floor(targetW * factor));
+                targetH = Math.max(1, Math.floor(targetH * factor));
+            }
+
+            // Prepare canvas at display size
+            canvas.width = targetW;
+            canvas.height = targetH;
+
             x.save();
-            if (settings.rotateTimes % 2 === 1) {
-                sh = w;
-                sw = h;
-            }
-            canvas.height = sh;
-            canvas.width = sw;
-            x.translate(sw / 2, sh / 2);
+            x.imageSmoothingEnabled = true;
+            try { x.imageSmoothingQuality = 'high'; } catch(_) {}
+
+            // Center at display size, rotate, flip, then scale image to display size
+            x.translate(targetW / 2, targetH / 2);
             x.rotate(Math.PI / 2 * settings.rotateTimes);
-            x.translate(-w / 2, -h / 2);
-            if (settings.vflip) {
-                x.scale(1, -1);
-                x.translate(0, -h);
-            }
-            if (settings.hflip) {
-                x.scale(-1, 1);
-                x.translate(-w, 0);
-            }
-            canvas.style.display = "none";
-            scrollTo(0, 0);
-            x.drawImage(img, 0, 0);
+            if (settings.vflip) x.scale(1, -1);
+            if (settings.hflip) x.scale(-1, 1);
+
+            // Uniform scale to map natural rotated size to target size
+            var dispScale = Math.min(targetW / natW, targetH / natH);
+            if (!isFinite(dispScale) || dispScale <= 0) dispScale = 1;
+            x.scale(dispScale, dispScale);
+
+            // Draw centered
+            x.drawImage(img, -imgW / 2, -imgH / 2, imgW, imgH);
+
+            x.restore();
 
             canvas.style.display = "";
             $("body").css("overflowY", "");
-            x.restore();
             if (typeof onRendered === 'function') {
                 try { onRendered(); } catch(e) { console.error(e); }
             }
