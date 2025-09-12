@@ -63,6 +63,8 @@ var imageFiles = [];
 var imageFilenames = [];
 var totalImages = 0;
 var prevScrollPosition = 0;
+// Keep reference to archive entries for on-demand re-decompression
+var archiveEntries = null;
 
 var settings = {
     hflip: false,
@@ -182,6 +184,8 @@ kthoom.ImageFile = function(file) {
     if ( this.mimeType !== undefined) {
         this.dataURI = createURLFromArray(file.fileData, this.mimeType);
     }
+    // Release original ArrayBuffer reference to allow GC
+    try { file.fileData = null; } catch (e) {}
 };
 
 function initProgressClick() {
@@ -203,6 +207,7 @@ function loadFromArrayBuffer(ab) {
 
             console.info('Uncompressing ' + archive.archive_type + ' ...');
             const entries = archive.entries.sort((a,b) => collator.compare(a.name, b.name));
+            archiveEntries = entries;
             totalImages = entries.length;
 
             // Prepare arrays sized to total pages
@@ -244,12 +249,37 @@ function loadFromArrayBuffer(ab) {
 
                         imageFiles[index] = imgFile;
                         imageFilenames[index] = e.name;
-                        setImage(imgFile.dataURI, $(".mainImage")[index]);
+                        setImage(imgFile.dataURI, $(".mainImage")[index], function() {
+                            // After rendering, generate a lightweight thumbnail and revoke blob URL
+                            try {
+                                var mainCanvas = $(".mainImage")[index];
+                                if (mainCanvas) {
+                                    var tw = 160; // thumbnail width
+                                    var th = Math.max(1, Math.round(mainCanvas.height * (tw / Math.max(1, mainCanvas.width))));
+                                    var tcanvas = document.createElement('canvas');
+                                    tcanvas.width = tw;
+                                    tcanvas.height = th;
+                                    var tx = tcanvas.getContext('2d');
+                                    tx.drawImage(mainCanvas, 0, 0, tw, th);
+                                    var thumbURL = tcanvas.toDataURL('image/jpeg', 0.7);
+                                    var $thumbImg = $("#thumbnails a[data-page='" + (index + 1) + "'] img");
+                                    if ($thumbImg.length) $thumbImg.attr('src', thumbURL);
+                                }
+                            } catch(thumbErr) { console.warn('Thumbnail generation failed', thumbErr); }
 
-                        // Add thumbnail in correct order position
+                            // Revoke blob URL and drop reference to allow GC
+                            try {
+                                if (typeof imgFile.dataURI === 'string' && imgFile.dataURI.indexOf('blob:') === 0) {
+                                    URL.revokeObjectURL(imgFile.dataURI);
+                                }
+                                imgFile.dataURI = null;
+                            } catch(revokeErr) { console.warn('Revoke failed', revokeErr); }
+                        });
+
+                        // Add thumbnail in correct order position (placeholder, replaced after render)
                         var liHtml = "<li>" +
                                      "<a data-page='" + (index + 1) + "'>" +
-                                     "<img src='" + imgFile.dataURI + "'/>" +
+                                     "<img src='' alt='thumb'/>" +
                                      "<span>" + (index + 1) + "</span>" +
                                      "</a>" +
                                      "</li>";
@@ -405,7 +435,7 @@ function updateProgress(loadPercentage) {
     $("#progress .bar-read").css({ width: totalImages === 0 ? 0 : Math.round((currentImage + 1) / totalImages * 100) + "%"});
 }
 
-function setImage(url, _canvas) {
+function setImage(url, _canvas, onRendered) {
     // Prefer provided canvas; otherwise try current page; finally last canvas
     var canvas = _canvas || $(".mainImage")[currentImage] || $(".mainImage").slice(-1)[0];
     var x = canvas.getContext("2d");
@@ -484,6 +514,9 @@ function setImage(url, _canvas) {
             canvas.style.display = "";
             $("body").css("overflowY", "");
             x.restore();
+            if (typeof onRendered === 'function') {
+                try { onRendered(); } catch(e) { console.error(e); }
+            }
         };
         img.src = url;
     }
@@ -492,8 +525,21 @@ function setImage(url, _canvas) {
 // reloadImages is a slow process when multiple images are involved. Only used when rotating/mirroring
 function reloadImages() {
     for (var i = 0; i < imageFiles.length; i++) {
-        if (!imageFiles[i]) continue; // Skip not-yet-loaded pages
-        setImage(imageFiles[i].dataURI, $(".mainImage")[i]);
+        if (!imageFiles[i]) continue; // Skip not-yet-loaded placeholders
+        if (imageFiles[i].dataURI) {
+            setImage(imageFiles[i].dataURI, $(".mainImage")[i]);
+        } else if (archiveEntries && archiveEntries[i]) {
+            // Re-decompress on demand, then draw (setImage will revoke after render)
+            (function(idx){
+                archiveEntries[idx].readData(function(d){
+                    try {
+                        var tmp = new kthoom.ImageFile({ filename: imageFilenames[idx], fileData: d });
+                        imageFiles[idx].dataURI = tmp.dataURI;
+                        setImage(imageFiles[idx].dataURI, $(".mainImage")[idx], function(){ /* revoked inside setImage callback path */});
+                    } catch(e) { console.error('Failed to reload image', e); }
+                });
+            })(i);
+        }
     }
 }
 
