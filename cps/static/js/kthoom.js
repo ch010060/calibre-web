@@ -219,15 +219,17 @@ function loadFromArrayBuffer(ab) {
                 drawCanvas(i);
             }
 
-            // Sequential, lazy loader with prefetch window
+            // Sequential, lazy loader with prefetch window (adaptive)
             let loading = false;
             let loadedCount = 0;
             const loadQueue = [];
             const inQueue = new Set();
+            var adaptivePrefetch = null; // null means use setting
             function getPrefetchAhead() {
-                var n = parseInt(settings.prefetch, 10);
-                if (isNaN(n) || n < 0) return 5;
-                return n;
+                var maxn = parseInt(settings.prefetch, 10);
+                if (isNaN(maxn) || maxn < 0) maxn = 5;
+                if (adaptivePrefetch == null) return maxn;
+                return Math.max(0, Math.min(maxn, adaptivePrefetch|0));
             }
 
             function processQueue() {
@@ -292,7 +294,7 @@ function loadFromArrayBuffer(ab) {
                         }
 
                         loadedCount++;
-                        updateProgress(Math.round(loadedCount / totalImages * 100));
+                        updateProgress(Math.round(loadedCount / totalImages * 100), 'Decoding…');
 
                         // Show first page as soon as it's ready
                         if (index === 0 && currentImage === 0) {
@@ -404,7 +406,7 @@ function pageDisplayUpdate() {
     }
 }
 
-function updateProgress(loadPercentage) {
+function updateProgress(loadPercentage, statusText) {
     if (settings.direction === 0) {
         $("#progress .bar-read")
             .removeClass("from-right")
@@ -424,6 +426,9 @@ function updateProgress(loadPercentage) {
     // Set the load/unzip progress if it's passed in
     if (loadPercentage) {
         $("#progress .bar-load").css({ width: loadPercentage + "%" });
+        if (statusText && loadPercentage < 100) {
+            $("#progress .load").text(statusText);
+        }
 
         if (loadPercentage === 100) {
             $("#progress")
@@ -781,10 +786,186 @@ function setRead() {
       });
 }
 
-function init(filename) {
+async function init(filename) {
     var request = new XMLHttpRequest();
+    // Try streaming open first for large CBZ when range + DecompressionStream are available
+    try {
+        if (typeof ZipStream !== 'undefined' && typeof DecompressionStream !== 'undefined') {
+            // Wire network progress into load bar before decoding starts
+            let netFetched = 0;
+            ZipStream.onProgress(function(delta, total) {
+                try {
+                    netFetched += (typeof delta === 'number' ? delta : 0);
+                    if (total > 0) {
+                        const pct = Math.min(99, Math.round((netFetched / total) * 100));
+                        updateProgress(pct, 'Streaming…');
+                        // crude bandwidth-based adaptive prefetch: bytes/sec over last tick
+                        // here we just use average so far
+                        var secs = (performance.now() - startTimeMs) / 1000;
+                        if (secs > 0.5) {
+                            var bps = netFetched / secs;
+                            // map bandwidth to prefetch window (capped by user setting later)
+                            // <1 Mbps -> 1, <5 Mbps -> 2, <20 Mbps -> 3, else 5
+                            var mbps = bps / (1024*1024);
+                            if (mbps < 1) adaptivePrefetch = 1;
+                            else if (mbps < 5) adaptivePrefetch = 2;
+                            else if (mbps < 20) adaptivePrefetch = 3;
+                            else adaptivePrefetch = 5;
+                        }
+                    }
+                } catch(_) {}
+            });
+            const startTimeMs = performance.now();
+            const streamed = await ZipStream.open(filename);
+            if (streamed && streamed.entries && streamed.entries.length) {
+                // Initialize settings and UI first
+                kthoom.loadSettings();
+                setTheme();
+                updateScale();
+                initProgressClick();
+                document.body.className += /AppleWebKit/.test(navigator.userAgent) ? " webkit" : "";
+
+                // Start with streaming entries (reuse existing pipeline)
+                const collator = new Intl.Collator('en', { numeric: true, sensitivity: 'base' });
+                const entries = streamed.entries.sort((a,b) => collator.compare(a.name, b.name));
+                totalImages = entries.length;
+
+                // Prepare arrays
+                imageFiles = new Array(totalImages);
+                imageFilenames = new Array(totalImages);
+                for (let i = 0; i < totalImages; i++) drawCanvas(i);
+
+                // Use same queueing logic as full-download path
+                (function setupQueue() {
+                    let loading = false;
+                    let loadedCount = 0;
+                    const loadQueue = [];
+                    const inQueue = new Set();
+                    function getPrefetchAhead() {
+                        var n = parseInt(settings.prefetch, 10);
+                        if (isNaN(n) || n < 0) return 5;
+                        return n;
+                    }
+                    function processQueue() {
+                        if (loading) return;
+                        const index = loadQueue.shift();
+                        if (typeof index === 'undefined') return;
+                        inQueue.delete(index);
+                        loading = true;
+                        const e = entries[index];
+                        if (!$(".mainImage")[index]) drawCanvas(index);
+                        e.readData(function(d) {
+                            try {
+                                const data = { filename: e.name, fileData: d };
+                                const imgFile = new kthoom.ImageFile(data);
+                                imageFiles[index] = imgFile;
+                                imageFilenames[index] = e.name;
+                                setImage(imgFile.dataURI, $(".mainImage")[index], function() {
+                                    try {
+                                        var mainCanvas = $(".mainImage")[index];
+                                        if (mainCanvas) {
+                                            var tw = 160;
+                                            var th = Math.max(1, Math.round(mainCanvas.height * (tw / Math.max(1, mainCanvas.width))));
+                                            var tcanvas = document.createElement('canvas');
+                                            tcanvas.width = tw; tcanvas.height = th;
+                                            var tx = tcanvas.getContext('2d');
+                                            tx.drawImage(mainCanvas, 0, 0, tw, th);
+                                            var thumbURL = tcanvas.toDataURL('image/jpeg', 0.7);
+                                            var $thumbImg = $("#thumbnails a[data-page='" + (index + 1) + "'] img");
+                                            if ($thumbImg.length) $thumbImg.attr('src', thumbURL);
+                                        }
+                                    } catch(thumbErr) { console.warn('Thumbnail generation failed', thumbErr); }
+                                    try { if (imgFile.dataURI && imgFile.dataURI.indexOf('blob:') === 0) URL.revokeObjectURL(imgFile.dataURI); imgFile.dataURI = null; } catch(e) {}
+                                });
+                                // Insert thumbnail placeholder in order if not present
+                                var $thumbs = $("#thumbnails");
+                                var $items = $thumbs.children("li");
+                                if ($items.length <= index) {
+                                    $thumbs.append("<li><a data-page='" + (index + 1) + "'>" +
+                                                   "<img src='' alt='thumb'/><span>" + (index + 1) + "</span></a></li>");
+                                } else if (!$items.eq(index).length) {
+                                    $($items[index]).before("<li><a data-page='" + (index + 1) + "'>" +
+                                                           "<img src='' alt='thumb'/><span>" + (index + 1) + "</span></a></li>");
+                                }
+                                loadedCount++;
+                        updateProgress(Math.round(loadedCount / totalImages * 100), 'Decoding…');
+                                if (index === 0 && currentImage === 0) updatePage();
+                            } catch (err) {
+                                console.error('Failed to decode image #' + (index + 1), err);
+                                setImage('error', $(".mainImage")[index]);
+                            } finally {
+                                loading = false;
+                                setTimeout(processQueue, 0);
+                            }
+                        });
+                    }
+                    function enqueue(index, priority) {
+                        if (index < 0 || index >= totalImages) return;
+                        if (imageFiles[index]) return;
+                        if (inQueue.has(index)) return;
+                        if (priority) loadQueue.unshift(index); else loadQueue.push(index);
+                        inQueue.add(index);
+                        processQueue();
+                    }
+                    if (currentImage < 0) currentImage = 0;
+                    if (currentImage >= totalImages) currentImage = totalImages - 1;
+                    enqueue(currentImage, true);
+                    for (let k = 1, m = getPrefetchAhead(); k <= m; k++) enqueue(currentImage + k, false);
+                    const originalUpdatePage = updatePage;
+                    updatePage = function() {
+                        originalUpdatePage();
+                        enqueue(currentImage, true);
+                        for (let k = 1, m = getPrefetchAhead(); k <= m; k++) enqueue(currentImage + k, false);
+                    };
+                    updatePage();
+                })();
+
+                // Hook events and handlers as usual
+                $(document).keydown(keyHandler);
+                $(window).resize(function() { updateScale(); });
+                $("#slider").click(function() {
+                    $("#sidebar").toggleClass("open");
+                    $("#main").toggleClass("closed");
+                    $(this).toggleClass("icon-menu icon-right");
+                    setTimeout(function() {
+                        $("#main:not(.closed) #mainContent, #sidebar.open #tocView").focus();
+                        scrollTocToActive();
+                    }, 500);
+                });
+                $("#setting").click(function() { $("#settings-modal").toggleClass("md-show"); });
+                $("#settings input").on("change", function() {
+                    var value = this.type === "checkbox" ? this.checked : this.value;
+                    value = /^\d+$/.test(value) ? parseInt(value) : value;
+                    settings[this.name] = value;
+                    if(["hflip", "vflip", "rotateTimes"].includes(this.name)) {
+                        reloadImages();
+                    } else if(this.name === "direction") {
+                        return updateProgress();
+                    }
+                    updatePage();
+                    updateScale();
+                });
+                $(".closer, .overlay").click(function() { $(".md-show").removeClass("md-show"); $("#mainContent").focus(); });
+                $("#mainContent").focus();
+                $("#mainContent").swipe({ swipeRight: function(){showLeftPage();}, swipeLeft: function(){showRightPage();} });
+                return; // streamed path handled, don't use XHR
+            }
+        }
+    } catch (e) {
+        console.warn('Streaming open failed, falling back:', e);
+    }
+
     request.open("GET", filename);
     request.responseType = "arraybuffer";
+    // Show download progress when falling back to full download
+    try {
+        request.onprogress = function (e) {
+            if (e && e.lengthComputable) {
+                var pct = Math.min(99, Math.round(e.loaded / e.total * 100));
+                updateProgress(pct, 'Downloading…');
+            }
+        };
+    } catch(_) {}
     request.addEventListener("load", function() {
         if (request.status >= 200 && request.status < 300) {
             loadFromArrayBuffer(request.response);
