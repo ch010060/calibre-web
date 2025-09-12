@@ -72,7 +72,8 @@ class TaskGenerateCoverThumbnails(CalibreTask):
         self.cache = fs.FileSystem()
         self.resolutions = [
             constants.COVER_THUMBNAIL_SMALL,
-            constants.COVER_THUMBNAIL_MEDIUM
+            constants.COVER_THUMBNAIL_MEDIUM,
+            constants.COVER_THUMBNAIL_LARGE,
         ]
 
     def run(self, worker_thread):
@@ -242,6 +243,7 @@ class TaskGenerateSeriesThumbnails(CalibreTask):
         self.resolutions = [
             constants.COVER_THUMBNAIL_SMALL,
             constants.COVER_THUMBNAIL_MEDIUM,
+            constants.COVER_THUMBNAIL_LARGE,
         ]
 
     def run(self, worker_thread):
