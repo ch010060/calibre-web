@@ -198,46 +198,110 @@ function loadFromArrayBuffer(ab) {
     loadArchiveFormats(['rar', 'zip', 'tar'], function() {
         // Open the file as an archive
         archiveOpenFile(ab, function (archive) {
-            if (archive) {
-                totalImages = archive.entries.length
-                console.info('Uncompressing ' + archive.archive_type + ' ...');
-                entries = archive.entries.sort((a,b) => collator.compare(a.name, b.name));
-                entries.forEach(function(e, i) {
-                    updateProgress( (i + 1)/ totalImages * 100);
-                    if (e.is_file) {
-                        e.readData(function(d) {
-                            // add any new pages based on the filename
-                            if (imageFilenames.indexOf(e.name) === -1) {
-                                let data = {filename: e.name, fileData: d};
-                                var test = new kthoom.ImageFile(data);
-                                if (test.mimeType !== undefined) {
-                                    imageFilenames.push(e.name);
-                                    imageFiles.push(test);
-                                    // add thumbnails to the TOC list
-                                    $("#thumbnails").append(
-                                        "<li>" +
-                                        "<a data-page='" + imageFiles.length + "'>" +
-                                        "<img src='" + imageFiles[imageFiles.length - 1].dataURI + "'/>" +
-                                        "<span>" + imageFiles.length + "</span>" +
-                                        "</a>" +
-                                        "</li>"
-                                    );
+            if (!archive) return;
 
-                                    drawCanvas();
-                                    setImage(test.dataURI, null);
+            console.info('Uncompressing ' + archive.archive_type + ' ...');
+            const entries = archive.entries.sort((a,b) => collator.compare(a.name, b.name));
+            totalImages = entries.length;
 
-                                    // display first page if we haven't yet
-                                    if (imageFiles.length === currentImage + 1) {
-                                        updatePage();
-                                    }
-                                } else {
-                                    totalImages--;
-                                }
-                            }
-                        });
+            // Prepare arrays sized to total pages
+            imageFiles = new Array(totalImages);
+            imageFilenames = new Array(totalImages);
+
+            // Pre-create canvases for all pages so layout is immediate
+            for (let i = 0; i < totalImages; i++) {
+                drawCanvas(i);
+            }
+
+            // Sequential, lazy loader with prefetch window
+            let loading = false;
+            let loadedCount = 0;
+            const loadQueue = [];
+            const inQueue = new Set();
+            const PREFETCH_AHEAD = 5;
+
+            function processQueue() {
+                if (loading) return;
+                const index = loadQueue.shift();
+                if (typeof index === 'undefined') return;
+                inQueue.delete(index);
+                loading = true;
+
+                const e = entries[index];
+                // Ensure target canvas exists
+                if (!$(".mainImage")[index]) {
+                    drawCanvas(index);
+                }
+                e.readData(function(d) {
+                    try {
+                        const data = { filename: e.name, fileData: d };
+                        const imgFile = new kthoom.ImageFile(data);
+
+                        imageFiles[index] = imgFile;
+                        imageFilenames[index] = e.name;
+                        setImage(imgFile.dataURI, $(".mainImage")[index]);
+
+                        // Add thumbnail in correct order position
+                        var liHtml = "<li>" +
+                                     "<a data-page='" + (index + 1) + "'>" +
+                                     "<img src='" + imgFile.dataURI + "'/>" +
+                                     "<span>" + (index + 1) + "</span>" +
+                                     "</a>" +
+                                     "</li>";
+                        var $thumbs = $("#thumbnails");
+                        var $items = $thumbs.children("li");
+                        if (index >= $items.length) {
+                            $thumbs.append(liHtml);
+                        } else {
+                            $($items[index]).before(liHtml);
+                        }
+
+                        loadedCount++;
+                        updateProgress(Math.round(loadedCount / totalImages * 100));
+
+                        // Show first page as soon as it's ready
+                        if (index === 0 && currentImage === 0) {
+                            updatePage();
+                        }
+                    } catch (err) {
+                        console.error('Failed to decode image #' + (index + 1), err);
+                        setImage('error', $(".mainImage")[index]);
+                    } finally {
+                        loading = false;
+                        setTimeout(processQueue, 0);
                     }
                 });
             }
+
+            function enqueue(index, priority) {
+                if (index < 0 || index >= totalImages) return;
+                if (imageFiles[index]) return; // already loaded
+                if (inQueue.has(index)) return;
+                if (priority) {
+                    loadQueue.unshift(index);
+                } else {
+                    loadQueue.push(index);
+                }
+                inQueue.add(index);
+                processQueue();
+            }
+
+            // Start from bookmarked/current page and prefetch next pages
+            if (currentImage < 0) currentImage = 0;
+            if (currentImage >= totalImages) currentImage = totalImages - 1;
+            enqueue(currentImage, true);
+            for (let k = 1; k <= PREFETCH_AHEAD; k++) enqueue(currentImage + k, false);
+
+            // On page updates, prioritize current and next page
+            const originalUpdatePage = updatePage;
+            updatePage = function() {
+                originalUpdatePage();
+                enqueue(currentImage, true);
+                for (let k = 1; k <= PREFETCH_AHEAD; k++) enqueue(currentImage + k, false);
+            };
+
+            // Ensure UI reflects the bookmarked/current page and start loading it
+            updatePage();
         });
     });
 }
@@ -246,18 +310,19 @@ function scrollTocToActive() {
     $(".page").text((currentImage + 1 ) + "/" + totalImages);
 
     // Mark the current page in the TOC
-    $("#tocView a[data-page]")
-    // Remove the currently active thumbnail
+    var $active = $("#tocView a[data-page]")
+        // Remove the currently active thumbnail
         .removeClass("active")
         // Find the new one
         .filter("[data-page=" + (currentImage + 1) + "]")
         // Set it to active
         .addClass("active");
 
-    // Scroll to the thumbnail in the TOC on page change
-    $("#tocView").stop().animate({
-        scrollTop: $("#tocView a.active").position().top
-    }, 200);
+    // Scroll to the thumbnail in the TOC on page change (if it exists)
+    var pos = $active.position();
+    if (pos) {
+        $("#tocView").stop().animate({ scrollTop: pos.top }, 200);
+    }
 }
 
 function updatePage() {
@@ -336,7 +401,8 @@ function updateProgress(loadPercentage) {
 }
 
 function setImage(url, _canvas) {
-    var canvas = _canvas || $(".mainImage").slice(-1)[0]; // Select the last item on the array if _canvas is null
+    // Prefer provided canvas; otherwise try current page; finally last canvas
+    var canvas = _canvas || $(".mainImage")[currentImage] || $(".mainImage").slice(-1)[0];
     var x = canvas.getContext("2d");
 
     $("#mainText").hide();
@@ -420,7 +486,8 @@ function setImage(url, _canvas) {
 
 // reloadImages is a slow process when multiple images are involved. Only used when rotating/mirroring
 function reloadImages() {
-    for(i=0; i < imageFiles.length; i++) {
+    for (var i = 0; i < imageFiles.length; i++) {
+        if (!imageFiles[i]) continue; // Skip not-yet-loaded pages
         setImage(imageFiles[i].dataURI, $(".mainImage")[i]);
     }
 }
@@ -453,7 +520,7 @@ function showPrevPage() {
 
 function showNextPage() {
     currentImage++;
-    if (currentImage >= Math.max(totalImages, imageFiles.length)) {
+    if (currentImage >= totalImages) {
         // Freeze on the current page.
         currentImage--;
         // Close window at the end of the book
@@ -610,7 +677,7 @@ function keyHandler(evt) {
     }
 }
 
-function drawCanvas() {
+function drawCanvas(index) {
     var maxheight = innerHeight - 50;
     var canvasElement = $("<canvas></canvas>");
     var x = canvasElement[0].getContext("2d");
@@ -635,14 +702,15 @@ function drawCanvas() {
         canvasElement.addClass("hide");
     }
 
-    //Fill with Placeholder text. setImage will override this
+    // Placeholder text. setImage will override this
     canvasElement.width = innerWidth - 100;
     canvasElement.height = 200;
     x.fillStyle = "black";
     x.textAlign = "center";
     x.font = "24px sans-serif";
     x.strokeStyle = (settings.theme === "dark") ? "white" : "black";
-    x.fillText("Loading Page #" + (currentImage + 1), innerWidth / 2, 100);
+    var pageNum = (typeof index === 'number') ? (index + 1) : (currentImage + 1);
+    x.fillText("Loading Page #" + pageNum, innerWidth / 2, 100);
 
     $("#mainContent").append(canvasElement);
 }
@@ -840,7 +908,7 @@ function init(filename) {
             // Don't trigger the scroll for Single Page
         } else if(scroll > prevScrollPosition) {
             //Scroll Down
-            if(currentImage + 1 < imageFiles.length) {
+            if(currentImage + 1 < totalImages) {
                 if(currentImageOffset(currentImage + 1) <= 1) {
                     currentImage++;
                     scrollTocToActive();
