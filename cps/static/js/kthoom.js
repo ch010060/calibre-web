@@ -75,7 +75,8 @@ var settings = {
     arrow: 1, // 0 = Hide Arrow, 1 = Show Arrow
     wheelflip: 0, // 0 = Disable wheel flip, 1 = Enable wheel flip
     autoClose: 0, // 0 = Disable auto close, 1 = Enable auto close
-    pageDisplay: 0 // 0 = Single Page, 1 = Long Strip
+    pageDisplay: 0, // 0 = Single Page, 1 = Long Strip
+    prefetch: 5 // number of pages to prefetch ahead
 };
 
 kthoom.saveSettings = function() {
@@ -218,7 +219,11 @@ function loadFromArrayBuffer(ab) {
             let loadedCount = 0;
             const loadQueue = [];
             const inQueue = new Set();
-            const PREFETCH_AHEAD = 5;
+            function getPrefetchAhead() {
+                var n = parseInt(settings.prefetch, 10);
+                if (isNaN(n) || n < 0) return 5;
+                return n;
+            }
 
             function processQueue() {
                 if (loading) return;
@@ -290,14 +295,14 @@ function loadFromArrayBuffer(ab) {
             if (currentImage < 0) currentImage = 0;
             if (currentImage >= totalImages) currentImage = totalImages - 1;
             enqueue(currentImage, true);
-            for (let k = 1; k <= PREFETCH_AHEAD; k++) enqueue(currentImage + k, false);
+            for (let k = 1, m = getPrefetchAhead(); k <= m; k++) enqueue(currentImage + k, false);
 
             // On page updates, prioritize current and next page
             const originalUpdatePage = updatePage;
             updatePage = function() {
                 originalUpdatePage();
                 enqueue(currentImage, true);
-                for (let k = 1; k <= PREFETCH_AHEAD; k++) enqueue(currentImage + k, false);
+                for (let k = 1, m = getPrefetchAhead(); k <= m; k++) enqueue(currentImage + k, false);
             };
 
             // Ensure UI reflects the bookmarked/current page and start loading it
