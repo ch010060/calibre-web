@@ -18,3 +18,10 @@ lxml>=3.8.0,<4.9.0
 flask-wtf>=0.14.2,<1.1.0
 chardet>=3.0.0,<4.1.0
 advocate>=1.0.0,<1.1.0
+
+# Optional components installed by default to avoid warnings from dependency_check(optional=True)
+# If you do not need these (e.g., Google Drive integration, gevent), you may remove them.
+gevent>20.6.0,<22.0.0
+greenlet>=0.4.17,<1.2.0
+pyasn1-modules>=0.0.8,<0.3.0
+pyasn1>=0.1.9,<0.5.0

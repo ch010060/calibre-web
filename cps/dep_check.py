@@ -5,9 +5,9 @@ import json
 
 from .constants import BASE_DIR
 try:
-    from importlib.metadata import version
+    from importlib.metadata import version, PackageNotFoundError
     importlib = True
-    ImportNotFound = BaseException
+    ImportNotFound = PackageNotFoundError
 except ImportError:
     importlib = False
     version = None
@@ -59,6 +59,7 @@ def load_dependencies(optional=False):
 def dependency_check(optional=False):
     d = list()
     deps = load_dependencies(optional)
+    seen = set()
     for dep in deps:
         try:
             dep_version_int = [int(x) for x in dep[0].split('.')]
@@ -67,43 +68,52 @@ def dependency_check(optional=False):
         except AttributeError:
             high_check = []
         except ValueError:
-            d.append({'name': dep[1],
-                      'target': "available",
-                      'found': "Not available"
-                      })
+            # If version parsing failed due to non-integer segments (e.g., rc, post),
+            # do not mark as not available unless truly missing
+            if str(dep[0]).lower() == 'not installed' and dep[1] not in seen:
+                d.append({'name': dep[1],
+                          'target': "available",
+                          'found': "Not available"})
+                seen.add(dep[1])
+            # else: skip warning
             continue
 
         if dep[2].strip() == "==":
-            if dep_version_int != low_check:
+            if dep_version_int != low_check and dep[1] not in seen:
                 d.append({'name': dep[1],
                           'found': dep[0],
                           "target": dep[2] + dep[3]})
+                seen.add(dep[1])
                 continue
         elif dep[2].strip() == ">=":
-            if dep_version_int < low_check:
+            if dep_version_int < low_check and dep[1] not in seen:
                 d.append({'name': dep[1],
                           'found': dep[0],
                           "target": dep[2] + dep[3]})
+                seen.add(dep[1])
                 continue
         elif dep[2].strip() == ">":
-            if dep_version_int <= low_check:
+            if dep_version_int <= low_check and dep[1] not in seen:
                 d.append({'name': dep[1],
                           'found': dep[0],
                           "target": dep[2] + dep[3]})
+                seen.add(dep[1])
                 continue
         if dep[4] and dep[5]:
             if dep[4].strip() == "<":
-                if dep_version_int >= high_check:
+                if dep_version_int >= high_check and dep[1] not in seen:
                     d.append(
                         {'name': dep[1],
                          'found': dep[0],
                          "target": dep[4] + dep[5]})
+                    seen.add(dep[1])
                     continue
             elif dep[4].strip() == "<=":
-                if dep_version_int > high_check:
+                if dep_version_int > high_check and dep[1] not in seen:
                     d.append(
                         {'name': dep[1],
                          'found': dep[0],
                          "target": dep[4] + dep[5]})
+                    seen.add(dep[1])
                     continue
     return d

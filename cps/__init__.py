@@ -139,12 +139,16 @@ def create_app():
               'Please install it using pip: "pip install flask-WTF" ***')
         web_server.stop(True)
         sys.exit(7)
+    deps = {}
     for res in dependency_check() + dependency_check(True):
+        name = res.get('name')
+        # Deduplicate by package name; prefer the first occurrence
+        if name and name not in deps:
+            deps[name] = res
+    for res in deps.values():
         log.info('*** "{}" version does not fit the requirements. '
                  'Should: {}, Found: {}, please consider installing required version ***'
-                 .format(res['name'],
-                         res['target'],
-                         res['found']))
+                 .format(res['name'], res['target'], res['found']))
     app.wsgi_app = ReverseProxied(app.wsgi_app)
 
     if os.environ.get('FLASK_DEBUG'):
