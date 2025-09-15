@@ -1160,6 +1160,19 @@ def get_robots():
         abort(403)
 
 
+# PWA: Service Worker at root scope
+@web.route('/sw.js')
+def service_worker():
+    try:
+        response = send_from_directory(constants.STATIC_DIR, 'sw.js')
+        # Ensure SW is always revalidated
+        response.headers['Cache-Control'] = 'no-cache'
+        response.headers['Content-Type'] = 'application/javascript'
+        return response
+    except PermissionError:
+        abort(403)
+
+
 @web.route("/show/<int:book_id>/<book_format>", defaults={'anyname': 'None'})
 @web.route("/show/<int:book_id>/<book_format>/<anyname>")
 @login_required_if_no_ano

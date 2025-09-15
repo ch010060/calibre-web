@@ -5,12 +5,22 @@
   <head>
     <title>{{instance}} | {{title}}</title>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Calibre-Web">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="theme-color" content="#191a1c">
 
     <!-- Bootstrap -->
+    <!-- PWA/App icons for iOS (PNG recommended). Provide 180x180 at minimum. -->
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='img/apple-touch-icon.png') }}">
+    <link rel="apple-touch-icon" sizes="167x167" href="{{ url_for('static', filename='img/apple-touch-icon-167.png') }}">
+    <link rel="apple-touch-icon" sizes="152x152" href="{{ url_for('static', filename='img/apple-touch-icon-152.png') }}">
+    <!-- Fallback to existing favicon if PNG icons are not yet provided -->
     <link rel="apple-touch-icon" sizes="140x140" href="{{ url_for('static', filename='favicon.ico') }}">
+    <!-- Web App Manifest (used by non‑iOS platforms) -->
+    <link rel="manifest" href="{{ url_for('static', filename='site.webmanifest') }}">
     <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <link href="{{ url_for('static', filename='css/libs/bootstrap.min.css') }}" rel="stylesheet" media="screen">
     {% block header %}{% endblock %}
@@ -216,6 +226,14 @@
       <script src="{{ url_for('static', filename='js/caliBlur.js') }}"></script>
     {% endif %}
     {% block js %}{% endblock %}
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          // Service Workers require HTTPS or localhost. Registration will fail on plain HTTP.
+          try { navigator.serviceWorker.register('/sw.js'); } catch(e) {}
+        });
+      }
+    </script>
   </body>
 <script>
     function changeViewList(){

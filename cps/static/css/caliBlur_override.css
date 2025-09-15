@@ -22,6 +22,17 @@ body.serieslist.grid-view div.container-fluid > div > div.col-sm-10::before {
   padding: 0 0;
   line-height: 15px;
 }
+
+/* iOS PWA safe-area adjustments (applies only where env() is supported) */
+.navbar.navbar-default {
+  padding-top: env(safe-area-inset-top);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+body {
+  padding-bottom: env(safe-area-inset-bottom);
+}
 /* Keep Archive toggle inline with other actions (minimal, targeted fix) */
 .book-meta .btn-toolbar [aria-label^="Download, send"] > .btn-group {
   display: flex;
