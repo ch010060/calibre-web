@@ -566,14 +566,18 @@ $(function() {
     // Init all data control handlers to default
     $("input[data-control]").trigger("change");
 
-    // Simple search suggestions (Meilisearch or SQL fallback)
+    // Simple search suggestions (single-popup: Saved when empty, Instant when typing)
     (function() {
         var $q = $("#query");
         var $box = $("#search-suggest");
         var debounceTimer = null;
         var selectedIndex = -1;
+        var lastQuery = null;
 
-        function hideBox() { $box.hide().empty(); }
+        function hideBox() {
+            $box.hide().empty();
+            $q.attr('aria-expanded', 'false');
+        }
 
         function setActive(idx) {
             var $items = $box.find('.suggest-item');
@@ -588,7 +592,7 @@ $(function() {
             var html = '';
             items.forEach(function(it){
                 var authors = (it.authors && it.authors.length) ? ('<div class="author">' + it.authors.join(', ') + '</div>') : '';
-                html += '<a class="suggest-item" href="' + it.href + '">'
+                html += '<a class="suggest-item" href="' + it.href + '">' 
                      +   '<img src="' + it.cover + '" alt="">'
                      +   '<div class="meta">'
                      +     '<div class="title">' + $('<div>').text(it.title).html() + '</div>'
@@ -597,33 +601,54 @@ $(function() {
                      + '</a>';
             });
             $box.html(html).show();
+            $q.attr('aria-expanded', 'true');
             selectedIndex = -1;
             setActive(selectedIndex);
         }
 
         function fetchSuggest(q) {
+            lastQuery = q;
             $.ajax({
                 method: 'GET',
                 url: getPath() + '/ajax/suggest',
                 dataType: 'json',
                 data: { q: q, limit: 8 },
-                success: function(resp){ render(resp.suggestions || []); },
+                success: function(resp){
+                    // Ignore stale responses
+                    if (q !== lastQuery) return;
+                    render(resp.suggestions || []);
+                },
                 error: function(){ hideBox(); }
             });
         }
 
-        $q.on('focus', function(){ if (!this.value) fetchSuggest(''); });
+        // On focus: empty -> show Saved; non-empty -> show Instant
+        $q.on('focus', function(){
+            var val = (this.value || '').trim();
+            if (val.length === 0) {
+                fetchSuggest('');
+            } else {
+                fetchSuggest(val);
+            }
+        });
         $q.on('input', function(){
             clearTimeout(debounceTimer);
-            var val = this.value || '';
-            debounceTimer = setTimeout(function(){ fetchSuggest(val); }, 200);
+            var val = (this.value || '').trim();
+            if (val.length === 0) {
+                // Show Saved searches only
+                debounceTimer = setTimeout(function(){ fetchSuggest(''); }, 120);
+            } else {
+                // Show Instant results only
+                debounceTimer = setTimeout(function(){ fetchSuggest(val); }, 200);
+            }
         });
         $q.on('keydown', function(e){
             var visible = $box.is(':visible');
             if (e.key === 'Escape') { hideBox(); return; }
             if (!visible && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
                 // open suggestions on arrow if empty
-                if (!this.value) fetchSuggest('');
+                var val = (this.value || '').trim();
+                if (val.length === 0) fetchSuggest(''); else fetchSuggest(val);
                 return;
             }
             if (visible) {
