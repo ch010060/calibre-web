@@ -565,6 +565,90 @@ $(function() {
 
     // Init all data control handlers to default
     $("input[data-control]").trigger("change");
+
+    // Simple search suggestions (Meilisearch or SQL fallback)
+    (function() {
+        var $q = $("#query");
+        var $box = $("#search-suggest");
+        var debounceTimer = null;
+        var selectedIndex = -1;
+
+        function hideBox() { $box.hide().empty(); }
+
+        function setActive(idx) {
+            var $items = $box.find('.suggest-item');
+            $items.removeClass('active');
+            if (idx >= 0 && idx < $items.length) {
+                $($items[idx]).addClass('active')[0].scrollIntoView({ block: 'nearest' });
+            }
+        }
+
+        function render(items) {
+            if (!items || !items.length) { hideBox(); return; }
+            var html = '';
+            items.forEach(function(it){
+                var authors = (it.authors && it.authors.length) ? ('<div class="author">' + it.authors.join(', ') + '</div>') : '';
+                html += '<a class="suggest-item" href="' + it.href + '">'
+                     +   '<img src="' + it.cover + '" alt="">'
+                     +   '<div class="meta">'
+                     +     '<div class="title">' + $('<div>').text(it.title).html() + '</div>'
+                     +       authors
+                     +   '</div>'
+                     + '</a>';
+            });
+            $box.html(html).show();
+            selectedIndex = -1;
+            setActive(selectedIndex);
+        }
+
+        function fetchSuggest(q) {
+            $.ajax({
+                method: 'GET',
+                url: getPath() + '/ajax/suggest',
+                dataType: 'json',
+                data: { q: q, limit: 8 },
+                success: function(resp){ render(resp.suggestions || []); },
+                error: function(){ hideBox(); }
+            });
+        }
+
+        $q.on('focus', function(){ if (!this.value) fetchSuggest(''); });
+        $q.on('input', function(){
+            clearTimeout(debounceTimer);
+            var val = this.value || '';
+            debounceTimer = setTimeout(function(){ fetchSuggest(val); }, 200);
+        });
+        $q.on('keydown', function(e){
+            var visible = $box.is(':visible');
+            if (e.key === 'Escape') { hideBox(); return; }
+            if (!visible && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+                // open suggestions on arrow if empty
+                if (!this.value) fetchSuggest('');
+                return;
+            }
+            if (visible) {
+                var $items = $box.find('.suggest-item');
+                if (!$items.length) return;
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    selectedIndex = Math.min(selectedIndex + 1, $items.length - 1);
+                    setActive(selectedIndex);
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    selectedIndex = Math.max(selectedIndex - 1, -1);
+                    setActive(selectedIndex);
+                } else if (e.key === 'Enter') {
+                    if (selectedIndex >= 0) {
+                        e.preventDefault();
+                        window.location = $($items[selectedIndex]).attr('href');
+                    }
+                }
+            }
+        });
+        $(document).on('click', function(e){
+            if (!$.contains($(".has-suggestions")[0], e.target)) hideBox();
+        });
+    })();
     $("select[data-control]").trigger("change");
     $("select[data-controlall]").trigger("change");
 

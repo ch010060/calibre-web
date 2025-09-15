@@ -42,12 +42,13 @@
         </div>
         {% if g.user.is_authenticated or g.allow_anonymous %}
           <form class="navbar-form navbar-left" role="search" action="{{url_for('search.simple_search')}}" method="GET">
-            <div class="form-group input-group input-group-sm">
+            <div class="form-group input-group input-group-sm has-suggestions">
               <label for="query" class="sr-only">{{_('Search')}}</label>
               <input type="text" class="form-control" id="query" name="query" placeholder="{{_('Search Library')}}" value="{{searchterm}}">
               <span class="input-group-btn">
                 <button type="submit" id="query_submit" class="btn btn-default">{{_('Search')}}</button>
               </span>
+              <div id="search-suggest" class="dropdown-menu" style="display:none;"></div>
             </div>
           </form>
         {% endif %}

@@ -212,6 +212,26 @@ table .bg-dark-danger a { color: #fff; }
 .rating .glyphicon-star.good { color: #444; }
 .rating-clear .glyphicon-remove { color: #333; }
 
+/* Search suggestions */
+.has-suggestions { position: relative; }
+#search-suggest {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  z-index: 1000;
+  padding: 0;
+  max-height: 360px;
+  overflow-y: auto;
+}
+#search-suggest .suggest-item { display: flex; align-items: center; padding: 6px 12px; }
+#search-suggest .suggest-item img { width: 28px; height: auto; margin-right: 8px; border: 1px solid #eee; }
+#search-suggest .suggest-item .meta { display: inline-block; }
+#search-suggest .suggest-item .title { font-weight: 600; margin: 0; }
+#search-suggest .suggest-item .author { font-size: 12px; color: #777; margin: 0; }
+#search-suggest .suggest-item:hover,
+#search-suggest .suggest-item.active { background: #f5f5f5; text-decoration: none; }
+
 .container-fluid .author .author-hidden,
 .container-fluid .author .author-hidden-divider { display: none; }
 

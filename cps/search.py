@@ -17,7 +17,7 @@
 import json
 from datetime import datetime
 
-from flask import Blueprint, request, redirect, url_for, flash
+from flask import Blueprint, request, redirect, url_for, flash, jsonify
 from flask import session as flask_session
 from flask_login import current_user
 from flask_babel import format_date
@@ -433,5 +433,69 @@ def render_search_results(term, offset=None, order=None, limit=None):
                                  title=_(u"Search"),
                                  page="search",
                                  order=order[1])
+
+
+@search.route("/ajax/suggest", methods=["GET"])
+@login_required_if_no_ano
+def suggest():
+    q = (request.args.get('q') or '').strip()
+    try:
+        limit = int(request.args.get('limit') or 8)
+    except ValueError:
+        limit = 8
+    limit = max(1, min(limit, 20))
+
+    suggestions = []
+
+    try:
+        # Prefer Meilisearch if enabled
+        if meili.is_enabled():
+            ms = meili.search(q, 0, limit)
+            if ms and ms.get('hits'):
+                ids = meili.extract_ids(ms)
+                if ids:
+                    books = calibre_db.session.query(db.Books) \
+                        .outerjoin(db.books_series_link, db.Books.id == db.books_series_link.c.book) \
+                        .outerjoin(db.Series) \
+                        .filter(calibre_db.common_filters(True)) \
+                        .filter(db.Books.id.in_(ids)) \
+                        .all()
+                    by_id = {b.id: b for b in books}
+                    ordered = [by_id[i] for i in ids if i in by_id]
+                    for b in ordered:
+                        suggestions.append({
+                            'id': b.id,
+                            'title': b.title,
+                            'authors': [a.name for a in b.authors],
+                            'href': url_for('web.show_book', book_id=b.id),
+                            'cover': url_for('web.get_cover', book_id=b.id, resolution='sm', c=int(b.last_modified.timestamp()))
+                        })
+        # Fallback to SQL (or when Meili returns no hits)
+        if not suggestions:
+            qry = calibre_db.session.query(db.Books) 
+            if q:
+                term = f"%{q.lower()}%"
+                qry = qry.filter(calibre_db.common_filters(True)) \
+                         .filter(func.lower(db.Books.title).ilike(term)) \
+                         .order_by(db.Books.timestamp.desc()) \
+                         .limit(limit)
+            else:
+                qry = qry.filter(calibre_db.common_filters(True)) \
+                         .order_by(db.Books.timestamp.desc()) \
+                         .limit(limit)
+            for b in qry.all():
+                suggestions.append({
+                    'id': b.id,
+                    'title': b.title,
+                    'authors': [a.name for a in b.authors],
+                    'href': url_for('web.show_book', book_id=b.id),
+                    'cover': url_for('web.get_cover', book_id=b.id, resolution='sm', c=int(b.last_modified.timestamp()))
+                })
+    except Exception as ex:
+        log.error_or_exception(ex)
+        # Do not fail the UI; just return empty suggestions
+        suggestions = []
+
+    return jsonify({'suggestions': suggestions})
 
 
