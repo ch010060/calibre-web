@@ -461,8 +461,14 @@ function setImage(url, _canvas, onRendered) {
 
         var img = new Image();
         img.onerror = function() {
-            canvas.width = innerWidth - 100;
-            canvas.height = 300;
+            var dprErr = Math.min(window.devicePixelRatio || 1, 2.0);
+            canvas.width = Math.max(1, Math.floor((innerWidth - 100) * dprErr));
+            canvas.height = Math.max(1, Math.floor(300 * dprErr));
+            if (typeof x.setTransform === 'function') {
+                x.setTransform(dprErr, 0, 0, dprErr, 0, 0);
+            } else {
+                x.scale(dprErr, dprErr);
+            }
             x.fillStyle = "black";
             x.font = "50px sans-serif";
             x.strokeStyle = "black";
@@ -533,13 +539,22 @@ function setImage(url, _canvas, onRendered) {
                 targetH = Math.max(1, Math.floor(targetH * factor));
             }
 
-            // Prepare canvas at display size
-            canvas.width = targetW;
-            canvas.height = targetH;
+            // HiDPI support: render at device pixel ratio for crisp output
+            var dpr = Math.min(window.devicePixelRatio || 1, 2.0);
+            // Keep CSS sizing controlled by layout; draw into a higher-resolution backing store
+            canvas.width = Math.max(1, Math.floor(targetW * dpr));
+            canvas.height = Math.max(1, Math.floor(targetH * dpr));
 
             x.save();
-            x.imageSmoothingEnabled = true;
-            try { x.imageSmoothingQuality = 'high'; } catch(_) {}
+            // Map drawing units to CSS pixels
+            if (typeof x.setTransform === 'function') {
+                x.setTransform(dpr, 0, 0, dpr, 0, 0);
+            } else {
+                x.scale(dpr, dpr);
+            }
+            // Choose smoothing based on scaling direction: disable when upscaling to avoid blur
+            // and enable with high quality when downscaling.
+            // The actual smoothing toggle is applied after dispScale is known.
 
             // Center at display size, rotate, flip, then scale image to display size
             x.translate(targetW / 2, targetH / 2);
@@ -550,6 +565,12 @@ function setImage(url, _canvas, onRendered) {
             // Uniform scale to map natural rotated size to target size
             var dispScale = Math.min(targetW / natW, targetH / natH);
             if (!isFinite(dispScale) || dispScale <= 0) dispScale = 1;
+            // Toggle smoothing for crisper upscales
+            var isUpscale = dispScale > 1.0001;
+            x.imageSmoothingEnabled = !isUpscale;
+            try { x.imageSmoothingQuality = isUpscale ? 'low' : 'high'; } catch(_) {}
+            // Hint browser when upscaling to render more crisply
+            try { canvas.style.imageRendering = isUpscale ? 'pixelated' : 'auto'; } catch(_) {}
             x.scale(dispScale, dispScale);
 
             // Draw centered
@@ -799,8 +820,14 @@ function drawCanvas(index) {
     }
 
     // Placeholder text. setImage will override this
-    canvasElement.width = innerWidth - 100;
-    canvasElement.height = 200;
+    var dpr = Math.min(window.devicePixelRatio || 1, 2.0);
+    canvasElement.width = Math.max(1, Math.floor((innerWidth - 100) * dpr));
+    canvasElement.height = Math.max(1, Math.floor(200 * dpr));
+    if (typeof x.setTransform === 'function') {
+        x.setTransform(dpr, 0, 0, dpr, 0, 0);
+    } else {
+        x.scale(dpr, dpr);
+    }
     x.fillStyle = "black";
     x.textAlign = "center";
     x.font = "24px sans-serif";
