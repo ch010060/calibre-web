@@ -202,7 +202,11 @@ function initProgressClick() {
 
 function loadFromArrayBuffer(ab) {
     const collator = new Intl.Collator('en', { numeric: true, sensitivity: 'base' });
-    loadArchiveFormats(['rar', 'zip', 'tar'], function() {
+    // Load only needed archive formats to avoid unnecessary asm.js/runtime warnings
+    var ext = (window.calibre && (window.calibre.archiveType||'').toLowerCase()) || '';
+    var map = { 'cbz': 'zip', 'cbr': 'rar', 'cbt': 'tar', 'zip':'zip','rar':'rar','tar':'tar' };
+    var needed = map[ext] ? [map[ext]] : ['rar','zip','tar'];
+    loadArchiveFormats(needed, function() {
         // Open the file as an archive
         archiveOpenFile(ab, function (archive) {
             if (!archive) return;
@@ -445,7 +449,7 @@ function updateProgress(loadPercentage, statusText) {
 function setImage(url, _canvas, onRendered) {
     // Prefer provided canvas; otherwise try current page; finally last canvas
     var canvas = _canvas || $(".mainImage")[currentImage] || $(".mainImage").slice(-1)[0];
-    var x = canvas.getContext("2d");
+    var x = canvas.getContext('2d', { willReadFrequently: true }) || canvas.getContext('2d');
 
     $("#mainText").hide();
     if (url === "error") {
@@ -623,7 +627,7 @@ function applyLightSharpen(canvas) {
     var MAX_PIXELS = 8 * 1024 * 1024; // ~8MP safeguard
     var w = canvas.width, h = canvas.height;
     if (w * h > MAX_PIXELS) return;
-    var ctx = canvas.getContext('2d');
+    var ctx = canvas.getContext('2d', { willReadFrequently: true }) || canvas.getContext('2d');
     var src = ctx.getImageData(0, 0, w, h);
     var dst = ctx.createImageData(w, h);
     var s = src.data, d = dst.data;
@@ -661,7 +665,7 @@ function applyAutoContrast(canvas) {
     var MAX_PIXELS = 8 * 1024 * 1024; // ~8MP safeguard
     var w = canvas.width, h = canvas.height;
     if (w * h > MAX_PIXELS) return;
-    var ctx = canvas.getContext('2d');
+    var ctx = canvas.getContext('2d', { willReadFrequently: true }) || canvas.getContext('2d');
     var img = ctx.getImageData(0, 0, w, h);
     var d = img.data;
     var histR = new Uint32Array(256), histG = new Uint32Array(256), histB = new Uint32Array(256);
@@ -698,7 +702,7 @@ function applyAutoLevels(canvas) {
     var MAX_PIXELS = 8 * 1024 * 1024; // ~8MP safeguard
     var w = canvas.width, h = canvas.height;
     if (w * h > MAX_PIXELS) return;
-    var ctx = canvas.getContext('2d');
+    var ctx = canvas.getContext('2d', { willReadFrequently: true }) || canvas.getContext('2d');
     var img = ctx.getImageData(0, 0, w, h);
     var d = img.data;
     var minR=255, minG=255, minB=255, maxR=0, maxG=0, maxB=0;
@@ -928,7 +932,7 @@ function keyHandler(evt) {
 function drawCanvas(index) {
     var maxheight = innerHeight - 50;
     var canvasElement = $("<canvas></canvas>");
-    var x = canvasElement[0].getContext("2d");
+    var x = canvasElement[0].getContext('2d', { willReadFrequently: true }) || canvasElement[0].getContext('2d');
     canvasElement.addClass("mainImage");
 
     switch (settings.fitMode) {

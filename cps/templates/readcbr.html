@@ -8,6 +8,7 @@
   <title>{{_('Comic Reader')}} | {{title}}</title>
   <meta name="viewport" content="width=device-width, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
 
   <link rel="stylesheet" href="{{ url_for('static', filename='css/libs/normalize.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}" type="text/css"/>
@@ -260,7 +261,8 @@
       bookmarkUrl: "{{ url_for('web.set_bookmark', book_id=comicfile, book_format=extension.upper()) }}",
       bookmark: "{{ bookmark.bookmark_key if bookmark != None }}",
       useBookmarks: "{{ g.user.is_authenticated | tojson }}",
-      togglereadUrl: "{{ url_for('web.toggle_read', book_id=comicfile) }}"
+      togglereadUrl: "{{ url_for('web.toggle_read', book_id=comicfile) }}",
+      archiveType: "{{ extension.lower() }}"
     };
     if (calibre.useBookmarks) {
       currentImage = eval(calibre.bookmark);
