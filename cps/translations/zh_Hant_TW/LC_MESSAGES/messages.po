@@ -140,6 +140,16 @@ msgstr "平滑（雙線性）"
 msgid "Sharpened"
 msgstr "銳化"
 
+#: cps/templates/readcbr.html
+msgid "Image Processing"
+msgstr "影像處理"
+
+msgid "Auto Contrast"
+msgstr "自動對比"
+
+msgid "Auto Levels"
+msgstr "自動色階"
+
 #: cps/admin.py:517
 msgid "No Valid Locale Given"
 msgstr "無可用本地化"

@@ -79,7 +79,8 @@ var settings = {
     autoClose: 0, // 0 = Disable auto close, 1 = Enable auto close
     pageDisplay: 0, // 0 = Single Page, 1 = Long Strip
     prefetch: 5, // number of pages to prefetch ahead
-    upscaleMode: 'sharpened' // 'crisp' | 'smooth' | 'sharpened'
+    upscaleMode: 'sharpened', // 'crisp' | 'smooth' | 'sharpened'
+    dipMode: 'disabled' // 'disabled' | 'autocontrast' | 'autolevels'
 };
 
 kthoom.saveSettings = function() {
@@ -596,6 +597,12 @@ function setImage(url, _canvas, onRendered) {
 
             x.restore();
 
+            // Optional DIP for pale scans
+            if (settings.dipMode === 'autocontrast') {
+                try { applyAutoContrast(canvas); } catch(e) { console.warn('contrast failed', e); }
+            } else if (settings.dipMode === 'autolevels') {
+                try { applyAutoLevels(canvas); } catch(e) { console.warn('autolevels failed', e); }
+            }
             // Optional post-sharpen for upscales
             if (isUpscale && mode === 'sharpened') {
                 try { applyLightSharpen(canvas); } catch(e) { console.warn('sharpen failed', e); }
@@ -647,6 +654,69 @@ function applyLightSharpen(canvas) {
         }
     }
     ctx.putImageData(dst, 0, 0);
+}
+
+// Auto-contrast using per-channel percentile stretch
+function applyAutoContrast(canvas) {
+    var MAX_PIXELS = 8 * 1024 * 1024; // ~8MP safeguard
+    var w = canvas.width, h = canvas.height;
+    if (w * h > MAX_PIXELS) return;
+    var ctx = canvas.getContext('2d');
+    var img = ctx.getImageData(0, 0, w, h);
+    var d = img.data;
+    var histR = new Uint32Array(256), histG = new Uint32Array(256), histB = new Uint32Array(256);
+    var len = d.length;
+    for (var i = 0; i < len; i += 4) {
+        histR[d[i]]++;
+        histG[d[i+1]]++;
+        histB[d[i+2]]++;
+    }
+    function bounds(hist) {
+        var total = w * h;
+        var clip = Math.max(1, Math.floor(total * 0.005)); // 0.5% per tail
+        var lo = 0, hi = 255, acc = 0;
+        while (lo < 255 && (acc + hist[lo]) < clip) { acc += hist[lo++]; }
+        acc = 0;
+        while (hi > 0 && (acc + hist[hi]) < clip) { acc += hist[hi--]; }
+        if (hi <= lo + 1) { lo = Math.max(0, lo-1); hi = Math.min(255, hi+1); }
+        return [lo, hi];
+    }
+    var br = bounds(histR), bg = bounds(histG), bb = bounds(histB);
+    var sr = 255 / Math.max(1, (br[1] - br[0]));
+    var sg = 255 / Math.max(1, (bg[1] - bg[0]));
+    var sb = 255 / Math.max(1, (bb[1] - bb[0]));
+    for (var j = 0; j < len; j += 4) {
+        var r = (d[j]   - br[0]) * sr;   d[j]   = r < 0 ? 0 : r > 255 ? 255 : r|0;
+        var g = (d[j+1] - bg[0]) * sg;   d[j+1] = g < 0 ? 0 : g > 255 ? 255 : g|0;
+        var b = (d[j+2] - bb[0]) * sb;   d[j+2] = b < 0 ? 0 : b > 255 ? 255 : b|0;
+    }
+    ctx.putImageData(img, 0, 0);
+}
+
+// Auto-levels using simple per-channel min/max stretch (no clipping)
+function applyAutoLevels(canvas) {
+    var MAX_PIXELS = 8 * 1024 * 1024; // ~8MP safeguard
+    var w = canvas.width, h = canvas.height;
+    if (w * h > MAX_PIXELS) return;
+    var ctx = canvas.getContext('2d');
+    var img = ctx.getImageData(0, 0, w, h);
+    var d = img.data;
+    var minR=255, minG=255, minB=255, maxR=0, maxG=0, maxB=0;
+    for (var i=0;i<d.length;i+=4){
+        var r=d[i], g=d[i+1], b=d[i+2];
+        if (r<minR) minR=r; if (r>maxR) maxR=r;
+        if (g<minG) minG=g; if (g>maxG) maxG=g;
+        if (b<minB) minB=b; if (b>maxB) maxB=b;
+    }
+    var sr = 255 / Math.max(1, (maxR - minR));
+    var sg = 255 / Math.max(1, (maxG - minG));
+    var sb = 255 / Math.max(1, (maxB - minB));
+    for (var j=0;j<d.length;j+=4){
+        var r=(d[j]-minR)*sr;   d[j]  = r<0?0:r>255?255:r|0;
+        var g=(d[j+1]-minG)*sg; d[j+1]= g<0?0:g>255?255:g|0;
+        var b=(d[j+2]-minB)*sb; d[j+2]= b<0?0:b>255?255:b|0;
+    }
+    ctx.putImageData(img,0,0);
 }
 
 // reloadImages is a slow process when multiple images are involved. Only used when rotating/mirroring
@@ -1185,6 +1255,34 @@ async function init(filename) {
 
     // Focus the scrollable area so that keyboard scrolling work as expected
     $("#mainContent").focus();
+
+    // Bind settings changes to live-update rendering
+    $(document).on('change', '#settings input', function(){
+        var name = this.name;
+        var val;
+        if (this.type === 'checkbox') {
+            val = this.checked;
+        } else if (this.type === 'number') {
+            val = parseInt(this.value, 10) || 0;
+        } else {
+            // radio/text
+            // try parse int, else keep string
+            var iv = parseInt(this.value, 10);
+            val = (''+iv === this.value) ? iv : this.value;
+        }
+        settings[name] = val;
+        // Persist and refresh view depending on setting
+        if (name === 'fitMode') {
+            updateScale();
+        } else if (name === 'pageDisplay') {
+            pageDisplayUpdate();
+        } else if (name === 'rotateTimes' || name === 'vflip' || name === 'hflip' || name === 'dipMode' || name === 'upscaleMode') {
+            reloadImages();
+        } else if (name === 'theme' || name === 'scrollbar' || name === 'direction' || name === 'arrow') {
+            updatePage();
+        }
+        kthoom.saveSettings();
+    });
 
     $("#mainContent").swipe( {
         swipeRight:function() {

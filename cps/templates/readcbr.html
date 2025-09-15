@@ -146,6 +146,16 @@
                 </td>
               </tr>
               <tr>
+                <th>{{ _('Image Processing') }}:</th>
+                <td>
+                  <div class="inputs">
+                    <label for="dipDisabled"><input type="radio" id="dipDisabled" name="dipMode" value="disabled" /> {{_('No')}}</label>
+                    <label for="dipAutoContrast"><input type="radio" id="dipAutoContrast" name="dipMode" value="autocontrast" /> {{_('Auto Contrast')}}</label>
+                    <label for="dipAutoLevels"><input type="radio" id="dipAutoLevels" name="dipMode" value="autolevels" /> {{_('Auto Levels')}}</label>
+                  </div>
+                </td>
+              </tr>
+              <tr>
                 <th>{{_('Flip')}}:</th>
                 <td>
                   <div class="inputs">
