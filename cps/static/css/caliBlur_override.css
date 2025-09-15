@@ -22,3 +22,25 @@ body.serieslist.grid-view div.container-fluid > div > div.col-sm-10::before {
   padding: 0 0;
   line-height: 15px;
 }
+/* Keep Archive toggle inline with other actions (minimal, targeted fix) */
+.book-meta .btn-toolbar [aria-label^="Download, send"] > .btn-group {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  flex: 0 0 auto;
+}
+
+.book-meta .btn-toolbar [aria-label^="Download, send"] #archived_form {
+  float: none !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  height: 60px !important;
+  margin: 0 0 0 4px !important;
+}
+
+.book-meta .btn-toolbar [aria-label^="Download, send"] #archived_cb {
+  width: 50px !important;
+  height: 60px !important;
+  margin: 0 !important;
+  display: block !important;
+}
