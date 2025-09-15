@@ -123,6 +123,23 @@ msgstr "訪客的本地化是自動偵測而無法設置的"
 msgid "prefetch page"
 msgstr "預載頁數"
 
+# Upscale mode settings in Comic Reader
+#: cps/templates/readcbr.html
+msgid "Upscale Mode"
+msgstr "放大模式"
+
+#: cps/templates/readcbr.html
+msgid "Crisp (nearest)"
+msgstr "銳利（鄰近取樣）"
+
+#: cps/templates/readcbr.html
+msgid "Smooth (bilinear)"
+msgstr "平滑（雙線性）"
+
+#: cps/templates/readcbr.html
+msgid "Sharpened"
+msgstr "銳化"
+
 #: cps/admin.py:517
 msgid "No Valid Locale Given"
 msgstr "無可用本地化"

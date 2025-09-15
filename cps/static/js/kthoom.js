@@ -78,7 +78,8 @@ var settings = {
     wheelflip: 0, // 0 = Disable wheel flip, 1 = Enable wheel flip
     autoClose: 0, // 0 = Disable auto close, 1 = Enable auto close
     pageDisplay: 0, // 0 = Single Page, 1 = Long Strip
-    prefetch: 5 // number of pages to prefetch ahead
+    prefetch: 5, // number of pages to prefetch ahead
+    upscaleMode: 'sharpened' // 'crisp' | 'smooth' | 'sharpened'
 };
 
 kthoom.saveSettings = function() {
@@ -565,18 +566,40 @@ function setImage(url, _canvas, onRendered) {
             // Uniform scale to map natural rotated size to target size
             var dispScale = Math.min(targetW / natW, targetH / natH);
             if (!isFinite(dispScale) || dispScale <= 0) dispScale = 1;
-            // Toggle smoothing for crisper upscales
+            // Toggle smoothing strategy for upscales based on user setting
             var isUpscale = dispScale > 1.0001;
-            x.imageSmoothingEnabled = !isUpscale;
-            try { x.imageSmoothingQuality = isUpscale ? 'low' : 'high'; } catch(_) {}
-            // Hint browser when upscaling to render more crisply
-            try { canvas.style.imageRendering = isUpscale ? 'pixelated' : 'auto'; } catch(_) {}
+            var mode = (settings.upscaleMode || 'sharpened');
+            if (isUpscale) {
+                if (mode === 'crisp') {
+                    x.imageSmoothingEnabled = false;
+                    try { x.imageSmoothingQuality = 'low'; } catch(_) {}
+                    try { canvas.style.imageRendering = 'pixelated'; } catch(_) {}
+                } else if (mode === 'smooth') {
+                    x.imageSmoothingEnabled = true;
+                    try { x.imageSmoothingQuality = 'high'; } catch(_) {}
+                    try { canvas.style.imageRendering = 'auto'; } catch(_) {}
+                } else { // sharpened
+                    x.imageSmoothingEnabled = true;
+                    try { x.imageSmoothingQuality = 'high'; } catch(_) {}
+                    try { canvas.style.imageRendering = 'auto'; } catch(_) {}
+                }
+            } else {
+                // Downscaling
+                x.imageSmoothingEnabled = true;
+                try { x.imageSmoothingQuality = 'high'; } catch(_) {}
+                try { canvas.style.imageRendering = 'auto'; } catch(_) {}
+            }
             x.scale(dispScale, dispScale);
 
             // Draw centered
             x.drawImage(img, -imgW / 2, -imgH / 2, imgW, imgH);
 
             x.restore();
+
+            // Optional post-sharpen for upscales
+            if (isUpscale && mode === 'sharpened') {
+                try { applyLightSharpen(canvas); } catch(e) { console.warn('sharpen failed', e); }
+            }
 
             canvas.style.display = "";
             $("body").css("overflowY", "");
@@ -586,6 +609,44 @@ function setImage(url, _canvas, onRendered) {
         };
         img.src = url;
     }
+}
+
+// Lightweight unsharp mask (single pass sharpen kernel). Skips very large canvases.
+function applyLightSharpen(canvas) {
+    var MAX_PIXELS = 8 * 1024 * 1024; // ~8MP safeguard
+    var w = canvas.width, h = canvas.height;
+    if (w * h > MAX_PIXELS) return;
+    var ctx = canvas.getContext('2d');
+    var src = ctx.getImageData(0, 0, w, h);
+    var dst = ctx.createImageData(w, h);
+    var s = src.data, d = dst.data;
+    // 3x3 sharpen kernel
+    var k = [ 0,-1, 0,
+             -1, 5,-1,
+              0,-1, 0];
+    var idx = 0;
+    for (var y = 0; y < h; y++) {
+        for (var x = 0; x < w; x++, idx += 4) {
+            var r=0,g=0,b=0,a=0;
+            var i = 0;
+            for (var ky=-1; ky<=1; ky++) {
+                var yy = Math.min(h-1, Math.max(0, y+ky));
+                for (var kx=-1; kx<=1; kx++, i++) {
+                    var xx = Math.min(w-1, Math.max(0, x+kx));
+                    var si = (yy*w+xx)*4;
+                    var kv = k[i];
+                    r += s[si  ] * kv;
+                    g += s[si+1] * kv;
+                    b += s[si+2] * kv;
+                }
+            }
+            d[idx  ] = Math.max(0, Math.min(255, r));
+            d[idx+1] = Math.max(0, Math.min(255, g));
+            d[idx+2] = Math.max(0, Math.min(255, b));
+            d[idx+3] = s[idx+3];
+        }
+    }
+    ctx.putImageData(dst, 0, 0);
 }
 
 // reloadImages is a slow process when multiple images are involved. Only used when rotating/mirroring

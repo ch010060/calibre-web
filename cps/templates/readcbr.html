@@ -136,6 +136,16 @@
                 </td>
               </tr>
               <tr>
+                <th>{{ _('Upscale Mode') }}:</th>
+                <td>
+                  <div class="inputs">
+                    <label for="upscaleCrisp"><input type="radio" id="upscaleCrisp" name="upscaleMode" value="crisp" /> {{_('Crisp (nearest)')}}</label>
+                    <label for="upscaleSmooth"><input type="radio" id="upscaleSmooth" name="upscaleMode" value="smooth" /> {{_('Smooth (bilinear)')}}</label>
+                    <label for="upscaleSharpened"><input type="radio" id="upscaleSharpened" name="upscaleMode" value="sharpened" /> {{_('Sharpened')}}</label>
+                  </div>
+                </td>
+              </tr>
+              <tr>
                 <th>{{_('Flip')}}:</th>
                 <td>
                   <div class="inputs">
