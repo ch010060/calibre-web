@@ -49,6 +49,7 @@ from .helper import check_valid_domain, send_test_mail, reset_password, generate
     valid_email, check_username
 from .gdriveutils import is_gdrive_ready, gdrive_support
 from .render_template import render_title_template, get_sidebar_config
+from .tasks.meilisearch_index import TaskReindexMeilisearch
 from .services.worker import WorkerThread
 from .babel import get_available_translations, get_available_locale, get_user_locale_language
 from . import debug_info
@@ -406,6 +407,18 @@ def delete_user():
         success = [{'type': "success", 'message': _("{} users deleted successfully").format(count)}]
     success.extend(errors)
     return Response(json.dumps(success), mimetype='application/json')
+
+
+@admi.route("/ajax/reindex_meilisearch", methods=['POST'])
+@login_required
+@admin_required
+def reindex_meilisearch():
+    if not config.config_meilisearch_enabled or not config.config_meilisearch_host:
+        return Response(json.dumps({'type': 'danger', 'message': _('Meilisearch is not enabled or configured')}),
+                        mimetype='application/json', status=400)
+    WorkerThread.add(current_user.name, TaskReindexMeilisearch())
+    return Response(json.dumps({'type': 'success', 'message': _('Meilisearch reindex queued. See Tasks for progress.')}),
+                    mimetype='application/json')
 
 
 @admi.route("/ajax/getlocale")
@@ -1805,6 +1818,13 @@ def _configuration_update_helper():
             unrar_status = helper.check_unrar(config.config_rarfile_location)
             if unrar_status:
                 return _configuration_result(unrar_status)
+
+        # Meilisearch configuration
+        _config_checkbox(to_save, "config_meilisearch_enabled")
+        _config_string(to_save, "config_meilisearch_host")
+        if to_save.get("config_meilisearch_api_key", "") != "":
+            _config_string(to_save, "config_meilisearch_api_key")
+        _config_string(to_save, "config_meilisearch_index")
     except (OperationalError, InvalidRequestError) as e:
         ub.session.rollback()
         log.error_or_exception("Settings Database error: {}".format(e))

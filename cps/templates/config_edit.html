@@ -353,6 +353,37 @@
       </div>
     </div>
   </div>
+
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <a class="accordion-toggle" data-toggle="collapse" href="#collapsesearch">
+          <span class="glyphicon glyphicon-plus"></span>
+           {{_('Search Integration')}}
+        </a>
+      </h4>
+    </div>
+    <div id="collapsesearch" class="panel-collapse collapse">
+      <div class="panel-body">
+        <div class="form-group">
+          <input type="checkbox" id="config_meilisearch_enabled" name="config_meilisearch_enabled" {% if config.config_meilisearch_enabled %}checked{% endif %}>
+          <label for="config_meilisearch_enabled">{{_('Enable Meilisearch for simple search')}}</label>
+        </div>
+        <div class="form-group">
+          <label for="config_meilisearch_host">{{_('Meilisearch Host (e.g. http://127.0.0.1:7700)')}}</label>
+          <input type="text" class="form-control" id="config_meilisearch_host" name="config_meilisearch_host" value="{% if config.config_meilisearch_host != None %}{{ config.config_meilisearch_host }}{% endif %}" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label for="config_meilisearch_index">{{_('Meilisearch Index Name')}}</label>
+          <input type="text" class="form-control" id="config_meilisearch_index" name="config_meilisearch_index" value="{% if config.config_meilisearch_index != None %}{{ config.config_meilisearch_index }}{% endif %}" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label for="config_meilisearch_api_key">{{_('Meilisearch API Key (optional)')}}</label>
+          <input type="text" class="form-control" id="config_meilisearch_api_key" name="config_meilisearch_api_key" value="" autocomplete="off" placeholder="{{_('Leave blank to keep current')}}">
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
     <div class="col-sm-12">
     <button type="button" name="submit" id="config_submit" class="btn btn-default">{{_('Save')}}</button>

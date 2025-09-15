@@ -520,6 +520,33 @@ $(function() {
             }
         });
     });
+    $("#admin_reindex_meilisearch").click(function() {
+        $("#DialogHeader").addClass("hidden");
+        $("#DialogFinished").addClass("hidden");
+        $("#DialogContent").html("");
+        $("#spinner2").show();
+        $.ajax({
+            method: "post",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            url: getPath() + "/ajax/reindex_meilisearch",
+            success: function success(data) {
+                $("#spinner2").hide();
+                $("#DialogContent").html(data.message);
+                $("#DialogFinished").removeClass("hidden");
+            },
+            error: function error(xhr) {
+                $("#spinner2").hide();
+                try {
+                    var data = JSON.parse(xhr.responseText);
+                    $("#DialogContent").html(data.message || "Error");
+                } catch (e) {
+                    $("#DialogContent").html("Error");
+                }
+                $("#DialogFinished").removeClass("hidden");
+            }
+        });
+    });
     $("#perform_update").click(function() {
         $("#DialogHeader").removeClass("hidden");
         $("#spinner2").show();

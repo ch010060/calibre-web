@@ -26,6 +26,7 @@ from sqlalchemy.sql.expression import func, not_, and_, or_, text, true
 from sqlalchemy.sql.functions import coalesce
 
 from . import logger, db, calibre_db, config, ub
+from . import search_meilisearch as meili
 from .usermanagement import login_required_if_no_ano
 from .render_template import render_title_template
 from .pagination import Pagination
@@ -375,6 +376,46 @@ def render_prepare_search_form(cc):
 
 
 def render_search_results(term, offset=None, order=None, limit=None):
+    # Prefer Meilisearch if configured, fall back to SQL LIKE search
+    if meili.is_enabled():
+        try:
+            ms = meili.search(term, offset or 0, limit or config.config_books_per_page)
+            if ms and ms.get('hits'):
+                ids = meili.extract_ids(ms)
+                if ids:
+                    # Fetch matching books preserving relevance order (query pure Books ORM rows)
+                    q = calibre_db.session.query(db.Books) \
+                        .outerjoin(db.books_series_link, db.Books.id == db.books_series_link.c.book) \
+                        .outerjoin(db.Series) \
+                        .filter(calibre_db.common_filters(True)) \
+                        .filter(db.Books.id.in_(ids)) \
+                        .all()
+
+                    # Order results according to Meilisearch
+                    by_id = {b.id: b for b in q}
+                    ordered = [by_id[i] for i in ids if i in by_id]
+
+                    total = int(ms.get('estimatedTotalHits') or ms.get('nbHits') or len(ids))
+                    off = int(offset or 0)
+                    lim = int(limit or config.config_books_per_page)
+                    pagination = Pagination((off / lim + 1), lim, total)
+
+                    ub.store_combo_ids(ordered)
+                    entries = calibre_db.order_authors(ordered, list_return=True, combined=True)
+                    return render_title_template('search.html',
+                                                 searchterm=term,
+                                                 pagination=pagination,
+                                                 query=term,
+                                                 adv_searchterm=term,
+                                                 entries=entries,
+                                                 result_count=total,
+                                                 title=_(u"Search"),
+                                                 page="search",
+                                                 order=order[1])
+        except Exception as ex:
+            log.error_or_exception(ex)
+
+    # Fallback to original SQL search
     join = db.books_series_link, db.Books.id == db.books_series_link.c.book, db.Series
     entries, result_count, pagination = calibre_db.get_search_results(term,
                                                                       config,

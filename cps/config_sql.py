@@ -149,6 +149,12 @@ class _Settings(_Base):
     schedule_generate_series_covers = Column(Boolean, default=False)
     schedule_reconnect = Column(Boolean, default=False)
 
+    # Meilisearch integration (optional)
+    config_meilisearch_enabled = Column(Boolean, default=False)
+    config_meilisearch_host = Column(String, default="")
+    config_meilisearch_api_key = Column(String, default="")
+    config_meilisearch_index = Column(String, default="books")
+
     def __repr__(self):
         return self.__class__.__name__
 
