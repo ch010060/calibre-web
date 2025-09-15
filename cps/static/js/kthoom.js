@@ -77,7 +77,7 @@ var settings = {
     arrow: 1, // 0 = Hide Arrow, 1 = Show Arrow
     wheelflip: 0, // 0 = Disable wheel flip, 1 = Enable wheel flip
     autoClose: 0, // 0 = Disable auto close, 1 = Enable auto close
-    pageDisplay: 0, // 0 = Single Page, 1 = Long Strip
+    pageDisplay: 0, // 0 = Single Page, 1 = Long Strip, 2 = Two Pages
     prefetch: 5, // number of pages to prefetch ahead
     upscaleMode: 'sharpened', // 'crisp' | 'smooth' | 'sharpened'
     dipMode: 'disabled' // 'disabled' | 'autocontrast' | 'autolevels'
@@ -401,15 +401,44 @@ function setTheme() {
 }
 
 function pageDisplayUpdate() {
-    if(settings.pageDisplay === 0) {
-        $(".mainImage").addClass("hide");
+    var $content = $("#mainContent");
+    $content.removeClass("two-pages long-strip");
+    $(".mainImage").addClass("hide");
+    if (settings.pageDisplay === 0) {
         $(".mainImage").eq(currentImage).removeClass("hide");
-        $("#mainContent").removeClass("long-strip");
-    } else {
+    } else if (settings.pageDisplay === 1) {
         $(".mainImage").removeClass("hide");
-        $("#mainContent").addClass("long-strip");
+        $content.addClass("long-strip");
         scrollCurrentImageIntoView();
+    } else if (settings.pageDisplay === 2) {
+        $content.addClass("two-pages");
+        var pages = getSpreadIndices(currentImage);
+        pages.forEach(function(p){ if (p >=0 && p < totalImages) $(".mainImage").eq(p).removeClass('hide'); });
+        // apply gutter
+        var gutter = parseInt(settings.twoPagesGutter, 10) || 0;
+        try { $content.css('gap', gutter + 'px'); } catch(_){ }
     }
+}
+
+function getSpreadIndices(idx) {
+    if (settings.pageDisplay !== 2) return [idx];
+    // Alignment based on reading direction: 0=L2R (Western) => start right; 1=R2L (Manga) => start left
+    var start = (settings.direction === 0) ? 'right' : 'left';
+    if (start === 'right' && idx === 0) return [0];
+    var base;
+    if (start === 'left') {
+        base = idx - (idx % 2);
+    } else {
+        base = idx - 1;
+        if (base < 0) base = 0;
+    }
+    var pair = [base];
+    if (base + 1 < totalImages) pair.push(base + 1);
+    return pair;
+}
+
+function isSingleSpreadAt(idx) {
+    return getSpreadIndices(idx).length === 1;
 }
 
 function updateProgress(loadPercentage, statusText) {
@@ -512,7 +541,15 @@ function setImage(url, _canvas, onRendered) {
             var natH = (settings.rotateTimes % 2 === 1) ? imgW : imgH;
 
             // Container and constraints
-            var containerW = $("#mainContent").width() || innerWidth;
+            var $content = $("#mainContent");
+            var containerW = $content.width() || innerWidth;
+            if ($content.hasClass('two-pages')) {
+                var visible = $content.find('.mainImage:not(.hide)').length;
+                if (visible >= 2) {
+                    containerW = Math.max(1, Math.floor(containerW / 2));
+                }
+                try { $content.css('gap', '0px'); } catch(_g) {}
+            }
             var containerH = innerHeight - 50;
 
             // Compute target scale based on fit mode
@@ -761,7 +798,16 @@ function showRightPage() {
 }
 
 function showPrevPage() {
-    currentImage--;
+    if (settings.pageDisplay === 2) {
+        // two-pages: jump by spread size (1 if single, else 2)
+        var step = isSingleSpreadAt(currentImage) ? 1 : 2;
+        // alignment special case: if at index 0 and start is 'right', can't go back
+        if (!(settings.twoPagesStart === 'right' && currentImage === 0)) {
+            currentImage = Math.max(0, currentImage - step);
+        }
+    } else {
+        currentImage--;
+    }
     if (currentImage < 0) {
         // Freeze on the current page.
         currentImage++;
@@ -771,7 +817,12 @@ function showPrevPage() {
 }
 
 function showNextPage() {
-    currentImage++;
+    if (settings.pageDisplay === 2) {
+        var step = isSingleSpreadAt(currentImage) ? 1 : 2;
+        currentImage = Math.min(totalImages - 1, currentImage + step);
+    } else {
+        currentImage++;
+    }
     if (currentImage >= totalImages) {
         // Freeze on the current page.
         currentImage--;
@@ -1286,6 +1337,17 @@ async function init(filename) {
             updatePage();
         }
         kthoom.saveSettings();
+    });
+
+    // Auto landscape handler
+    $(window).on('resize orientationchange', function(){
+        var landscape = window.innerWidth > window.innerHeight;
+        var desired = landscape ? 2 : 0;
+        if (settings.pageDisplay !== desired) {
+            settings.pageDisplay = desired;
+            pageDisplayUpdate();
+            kthoom.saveSettings();
+        }
     });
 
     $("#mainContent").swipe( {

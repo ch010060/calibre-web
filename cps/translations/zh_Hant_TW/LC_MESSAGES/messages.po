@@ -2422,6 +2422,10 @@ msgstr "單頁"
 msgid "Long Strip"
 msgstr "長條"
 
+#: cps/templates/readcbr.html
+msgid "Two Pages"
+msgstr "雙頁"
+
 #: cps/templates/config_view_edit.html:47
 msgid "Regular Expression for Ignoring Columns"
 msgstr "可忽略的自定義欄位（正則表達式）"
