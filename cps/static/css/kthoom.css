@@ -7,6 +7,14 @@ body {
   margin: 0;
 }
 
+/* Respect iOS safe areas when running as a standalone web app */
+html, body {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
 #main {
   text-align: center;
   z-index: 2;
@@ -166,6 +174,7 @@ body {
 #titlebar {
   min-height: 25px;
   height: auto;
+  padding-top: env(safe-area-inset-top);
 }
 
 #metainfo {
