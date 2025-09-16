@@ -1293,6 +1293,12 @@ async function init(filename) {
                     allowPageScroll: "auto"
                 });
                 $("#mainContent").on('click', function(e){ flipByPointer(e, e.target); });
+                // TOC thumbnail pagination (streaming path)
+                $("#thumbnails").off('click.__kthoomThumb').on('click.__kthoomThumb', 'a', function(ev){
+                    ev.preventDefault();
+                    var page = $(this).data("page");
+                    if (typeof page === 'number') { currentImage = page - 1; updatePage(); }
+                });
                 return; // streamed path handled, don't use XHR
             }
         }
@@ -1376,10 +1382,11 @@ async function init(filename) {
 		$("#mainContent").focus(); // focus back on the main container so you use up/down keys without having to click on it
     });
 
-    // TOC thumbnail pagination
-    $("#thumbnails").on("click", "a", function() {
-        currentImage = $(this).data("page") - 1;
-        updatePage();
+    // TOC thumbnail pagination (fallback path)
+    $("#thumbnails").off('click.__kthoomThumb').on('click.__kthoomThumb', 'a', function(ev){
+        ev.preventDefault();
+        var page = $(this).data("page");
+        if (typeof page === 'number') { currentImage = page - 1; updatePage(); }
     });
 
     // Fullscreen mode
