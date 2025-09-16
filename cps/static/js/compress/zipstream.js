@@ -15,17 +15,7 @@
   let progressCb = null;
   let totalLenForProgress = 0;
 
-  async function head(url) {
-    try {
-      const res = await fetch(url, { method: "HEAD" });
-      if (!res.ok) return null;
-      const len = parseInt(res.headers.get("content-length") || "0", 10);
-      const ar = (res.headers.get("accept-ranges") || "").toLowerCase().includes("bytes");
-      return { length: len, acceptRanges: ar };
-    } catch (e) {
-      return null;
-    }
-  }
+  // We no longer rely on HEAD; use suffix ranges and Content-Range parsing
 
   async function fetchRange(url, start, endExclusive) {
     const end = endExclusive - 1;
@@ -122,6 +112,23 @@
     return entries;
   }
 
+  function isImageName(name) {
+    if (!name || name.endsWith('/')) return false;
+    const lower = name.toLowerCase();
+    // Exclude system/hidden artifacts from macOS and Windows
+    if (lower.indexOf('__macosx/') === 0) return false;
+    if (lower.endsWith('thumbs.db')) return false; // Windows thumbnail cache
+    if (lower.endsWith('desktop.ini')) return false; // Windows folder config
+    if (lower.split('/').some(seg => seg === '.ds_store')) return false; // macOS folder metadata
+    if (lower.split('/').some(seg => seg.startsWith('._'))) return false; // AppleDouble resource forks
+    return (
+      lower.endsWith('.jpg') || lower.endsWith('.jpeg') ||
+      lower.endsWith('.png') || lower.endsWith('.gif') ||
+      lower.endsWith('.webp') || lower.endsWith('.avif') ||
+      lower.endsWith('.svg')
+    );
+  }
+
   function readZip64Locator(u8, absBase) {
     // u8 is a slice containing the locator at some offset; return relative info
     const dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
@@ -170,27 +177,61 @@
       return compBytes.buffer.slice(compBytes.byteOffset, compBytes.byteOffset + compBytes.byteLength);
     }
     if (compMethod !== DEF_COMP) throw new Error("Unsupported compression method: " + compMethod);
-    if (typeof DecompressionStream === "undefined") throw new Error("DecompressionStream not supported");
+    if (typeof DecompressionStream === "undefined") {
+      // Fallback: try inflate via built-in browser APIs (Response + 'deflate' sometimes works) else throw
+      try {
+        const ds = new DecompressionStream("deflate");
+        const rs = new Response(new Blob([compBytes]).stream().pipeThrough(ds));
+        const ab = await rs.arrayBuffer();
+        return ab;
+      } catch (e) {
+        throw new Error("DecompressionStream not supported");
+      }
+    }
 
     // deflate-raw for ZIP payloads
-    const ds = new DecompressionStream("deflate-raw");
-    const rs = new Response(new Blob([compBytes]).stream().pipeThrough(ds));
-    const ab = await rs.arrayBuffer();
-    return ab;
+    try {
+      const ds = new DecompressionStream("deflate-raw");
+      const rs = new Response(new Blob([compBytes]).stream().pipeThrough(ds));
+      const ab = await rs.arrayBuffer();
+      return ab;
+    } catch (e) {
+      // Some Chrome builds may prefer 'deflate' wrapper; try it as fallback
+      const ds = new DecompressionStream("deflate");
+      const rs = new Response(new Blob([compBytes]).stream().pipeThrough(ds));
+      const ab = await rs.arrayBuffer();
+      return ab;
+    }
   }
 
   async function open(url) {
-    // Probe
-    const meta = await head(url);
-    if (!meta || !meta.acceptRanges || !meta.length || typeof fetch === "undefined") return null;
-    totalLenForProgress = meta.length;
+    if (typeof fetch === "undefined") return null;
 
-    // Read last 64 KiB to find EOCD
-    const tailSize = Math.min(65536 + 22, meta.length);
-    const tail = await fetchRange(url, meta.length - tailSize, meta.length);
+    // Fetch tail via suffix range to locate EOCD; works without HEAD
+    const tailWanted = 65536 + 22;
+    const tailRes = await fetch(url, { headers: { Range: `bytes=-${tailWanted}` } });
+    if (!(tailRes.status === 206 || tailRes.status === 200)) return null;
+    const tailBuf = new Uint8Array(await tailRes.arrayBuffer());
+    // Determine total length from Content-Range or Content-Length
+    let totalLen = 0;
+    const cr = tailRes.headers.get('content-range');
+    if (cr) {
+      // e.g., bytes 12345-67890/99999
+      const m = cr.match(/\/(\d+)$/);
+      if (m) totalLen = parseInt(m[1], 10);
+    }
+    if (!totalLen) {
+      const cl = tailRes.headers.get('content-length');
+      if (cl) totalLen = parseInt(cl, 10);
+      else totalLen = tailBuf.length; // fallback
+    }
+    totalLenForProgress = totalLen || 0;
+
+    // If we got the whole file in response to a range (status 200), keep only the last tailWanted slice
+    const tail = tailBuf.length > tailWanted ? tailBuf.subarray(tailBuf.length - tailWanted) : tailBuf;
     const eocdOffInTail = findEOCD(tail);
     if (eocdOffInTail < 0) return null;
-    const eocdAbsOff = meta.length - tailSize + eocdOffInTail;
+    const eocdAbsOff = totalLen - tail.length + eocdOffInTail;
     const eocd = readEOCD(tail, eocdOffInTail);
 
     let cdOffset = eocd.cdOffset;
@@ -205,7 +246,7 @@
         if (tail[i] === 0x50 && tail[i+1] === 0x4b && tail[i+2] === 0x06 && tail[i+3] === 0x07) { locIndex = i; break; }
       }
       if (locIndex >= 0) {
-        const locAbs = meta.length - tailSize + locIndex;
+        const locAbs = totalLen - tail.length + locIndex;
         const locatorSlice = tail.subarray(locIndex, locIndex + 20 + 4); // 20 bytes locator
         const locator = readZip64Locator(locatorSlice, locAbs);
         // Fetch ZIP64 EOCD record
@@ -222,7 +263,8 @@
 
     // Fetch central directory
     const cd = await fetchRange(url, cdOffset, cdOffset + cdSize);
-    const entries = parseCentralDirectory(cd, cdOffset);
+    const allEntries = parseCentralDirectory(cd, cdOffset);
+    const entries = allEntries.filter(e => isImageName(e.name));
 
     // Wrap entries with async readData(cb)
     const wrapped = entries.map((e) => ({
