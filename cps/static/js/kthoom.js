@@ -654,6 +654,21 @@ function setImage(url, _canvas, onRendered) {
             if (typeof onRendered === 'function') {
                 try { onRendered(); } catch(e) { console.error(e); }
             }
+
+            // AI Upscale: request server SR image sized to current target and swap in when ready
+            try {
+                if ((settings.upscaleMode || 'sharpened') === 'ai' && dispScale > 1.0001 && window.calibre && window.calibre.bookId) {
+                    var pageIdx = $(".mainImage").index(canvas);
+                    if (pageIdx >= 0) {
+                        var bookId = window.calibre.bookId;
+                        var srUrl = '/api/sr/' + encodeURIComponent(bookId) + '?page=' + pageIdx + '&tw=' + targetW + '&th=' + targetH;
+                        if (!canvas._srApplied || canvas._srApplied !== srUrl) {
+                            canvas._srApplied = srUrl;
+                            setTimeout(function(){ try { setImage(srUrl, canvas); } catch(_){} }, 0);
+                        }
+                    }
+                }
+            } catch(_e) {}
         };
         img.src = url;
     }

@@ -55,6 +55,11 @@ from .usermanagement import login_required_if_no_ano
 from .kobo_sync_status import remove_synced_book
 from .render_template import render_title_template
 from .kobo_sync_status import change_archived_books
+from .constants import CACHE_DIR
+import zipfile
+from io import BytesIO
+from PIL import Image
+import hashlib
 
 from markupsafe import escape  # dependency of flask
 from .services.worker import WorkerThread
@@ -1205,6 +1210,106 @@ def serve_book(book_id, book_format, anyname):
                 log.error("File Not Found")
                 return "File Not Found"
         return send_from_directory(os.path.join(config.config_calibre_dir, book.path), data.name + "." + book_format)
+
+
+@web.route("/api/sr/<int:book_id>")
+@login_required_if_no_ano
+def api_super_resolution(book_id):
+    try:
+        page = int(request.args.get('page', '0'))
+        tw = int(request.args.get('tw', '0'))
+        th = int(request.args.get('th', '0'))
+    except ValueError:
+        return make_response((b'Bad request', 400, {'Content-Type': 'text/plain'}))
+    if tw <= 0 or th <= 0 or page < 0:
+        return make_response((b'Bad request', 400, {'Content-Type': 'text/plain'}))
+
+    try:
+        book = calibre_db.get_book(book_id)
+        if not book:
+            return make_response((b'Not found', 404, {'Content-Type': 'text/plain'}))
+
+        data = calibre_db.get_book_format(book_id, 'CBZ') or calibre_db.get_book_format(book_id, 'ZIP')
+        if not data:
+            return make_response((b'Not found', 404, {'Content-Type': 'text/plain'}))
+        book_dir = os.path.join(config.config_calibre_dir, book.path)
+        cbz_path = os.path.join(book_dir, f"{data.name}." + (data.format.lower()))
+        if not os.path.isfile(cbz_path):
+            return make_response((b'Not found', 404, {'Content-Type': 'text/plain'}))
+
+        # Cache lookup
+        h = hashlib.sha1(f"{book_id}:{page}:{tw}x{th}".encode('utf-8')).hexdigest()
+        cache_dir = os.path.join(CACHE_DIR, 'sr', str(book_id))
+        os.makedirs(cache_dir, exist_ok=True)
+        cache_file = os.path.join(cache_dir, f"{h}.webp")
+        if os.path.isfile(cache_file):
+            return send_from_directory(cache_dir, os.path.basename(cache_file))
+
+        # Extract page
+        with zipfile.ZipFile(cbz_path, 'r') as zf:
+            names = [n for n in zf.namelist() if not n.endswith('/')]
+            def is_image(n):
+                ln = n.lower()
+                if ln.startswith('__macosx/') or ln.endswith('thumbs.db') or ln.endswith('desktop.ini'):
+                    return False
+                base = ln.split('/')[-1]
+                if base == '.ds_store' or base.startswith('._'):
+                    return False
+                return any(ln.endswith(ext) for ext in ('.jpg', '.jpeg', '.png', '.gif', '.webp', '.avif'))
+            img_names = [n for n in names if is_image(n)]
+            try:
+                from natsort import natsorted
+                img_names = natsorted(img_names)
+            except Exception:
+                img_names = sorted(img_names)
+            if page >= len(img_names):
+                return make_response((b'Not found', 404, {'Content-Type': 'text/plain'}))
+            with zf.open(img_names[page]) as f:
+                raw_bytes = f.read()
+        # Try PIL
+        try:
+            src_img = Image.open(BytesIO(raw_bytes))
+            src_img.load()
+            src = src_img.convert('RGB')
+        except Exception:
+            # Return original bytes with guessed mimetype
+            import mimetypes as _mt
+            guess = _mt.guess_type(img_names[page])[0] or 'application/octet-stream'
+            return make_response((raw_bytes, 200, {'Content-Type': guess, 'Cache-Control': 'no-store'}))
+
+        target_w = max(1, tw)
+        target_h = max(1, th)
+        if target_w <= src.width and target_h <= src.height:
+            buf0 = BytesIO()
+            try:
+                src.save(buf0, format='WEBP', quality=90)
+                return make_response((buf0.getvalue(), 200, {'Content-Type': 'image/webp', 'Cache-Control': 'no-store'}))
+            except Exception:
+                buf0 = BytesIO()
+                src.save(buf0, format='JPEG', quality=90)
+                return make_response((buf0.getvalue(), 200, {'Content-Type': 'image/jpeg', 'Cache-Control': 'no-store'}))
+
+        dst = src.resize((target_w, target_h), Image.LANCZOS)
+        buf = BytesIO()
+        mimetype = 'image/webp'
+        try:
+            dst.save(buf, format='WEBP', quality=90)
+        except Exception:
+            buf = BytesIO()
+            dst.save(buf, format='JPEG', quality=90)
+            mimetype = 'image/jpeg'
+        data_bytes = buf.getvalue()
+        # Cache best-effort
+        try:
+            with open(cache_file, 'wb') as wf:
+                wf.write(data_bytes)
+        except OSError:
+            pass
+        return make_response((data_bytes, 200, {'Content-Type': mimetype, 'Cache-Control': 'no-store'}))
+    except Exception as e:
+        # Log and return client error instead of 500
+        log.error_or_exception(e)
+        return make_response((b'Error', 400, {'Content-Type': 'text/plain'}))
 
 
 @web.route("/download/<int:book_id>/<book_format>", defaults={'anyname': 'None'})

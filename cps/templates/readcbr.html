@@ -131,6 +131,17 @@
                 </td>
               </tr>
               <tr>
+                <th>{{ _('Upscale Mode') }}:</th>
+                <td>
+                  <div class="inputs">
+                    <label><input type="radio" name="upscaleMode" value="crisp" /> {{_('Crisp (nearest)')}}</label>
+                    <label><input type="radio" name="upscaleMode" value="smooth" /> {{_('Smooth (bilinear)')}}</label>
+                    <label><input type="radio" name="upscaleMode" value="sharpened" /> {{_('Sharpened')}}</label>
+                    <label><input type="radio" name="upscaleMode" value="ai" /> {{_('AI Upscale')}}</label>
+                  </div>
+                </td>
+              </tr>
+              <tr>
                 <th>{{_('Rotate')}}:</th>
                 <td>
                   <div class="inputs">
@@ -138,16 +149,6 @@
                     <label for="r90"><input type="radio" id="r90" name="rotateTimes" value="1" /> 90&deg;</label>
                     <label for="r180"><input type="radio" id="r180" name="rotateTimes" value="2" /> 180&deg;</label>
                     <label for="r270"><input type="radio" id="r270" name="rotateTimes" value="3" /> 270&deg;</label>
-                  </div>
-                </td>
-              </tr>
-              <tr>
-                <th>{{ _('Upscale Mode') }}:</th>
-                <td>
-                  <div class="inputs">
-                    <label for="upscaleCrisp"><input type="radio" id="upscaleCrisp" name="upscaleMode" value="crisp" /> {{_('Crisp (nearest)')}}</label>
-                    <label for="upscaleSmooth"><input type="radio" id="upscaleSmooth" name="upscaleMode" value="smooth" /> {{_('Smooth (bilinear)')}}</label>
-                    <label for="upscaleSharpened"><input type="radio" id="upscaleSharpened" name="upscaleMode" value="sharpened" /> {{_('Sharpened')}}</label>
                   </div>
                 </td>
               </tr>
@@ -267,7 +268,8 @@
       bookmark: "{{ bookmark.bookmark_key if bookmark != None }}",
       useBookmarks: "{{ g.user.is_authenticated | tojson }}",
       togglereadUrl: "{{ url_for('web.toggle_read', book_id=comicfile) }}",
-      archiveType: "{{ extension.lower() }}"
+      archiveType: "{{ extension.lower() }}",
+      bookId: "{{ comicfile }}"
     };
     if (calibre.useBookmarks) {
       currentImage = eval(calibre.bookmark);

@@ -25,3 +25,21 @@ gevent>20.6.0,<22.0.0
 greenlet>=0.4.17,<1.2.0
 pyasn1-modules>=0.0.8,<0.3.0
 pyasn1>=0.1.9,<0.5.0
+
+# Imaging and AI Super-Resolution (server-side)
+# Pillow is used for baseline resizing and image IO
+pillow>=9.4.0,<11.0
+# Real-ESRGAN Python package and dependencies (runtime only; model weights + torch installed separately)
+realesrgan>=0.3.0,<0.5.0
+basicsr>=1.4.2,<1.5.0
+facexlib>=0.3.0,<0.4.0
+numpy>=1.21.0,<2.1.0
+opencv-python-headless>=4.7.0,<5.0.0
+
+# AVIF support for Pillow (decoding AVIF pages in CBZ)
+pillow-avif-plugin>=1.4.0,<2.0.0
+# HEIF/AVIF plugin (alternative/backup to AVIF plugin)
+pillow-heif>=0.13.0,<0.16.0
+
+# Note: PyTorch/torchvision are platform-specific. Install them separately for your OS/accelerator.
+# Example (Apple Silicon): pip install torch torchvision --extra-index-url https://download.pytorch.org/whl/cpu

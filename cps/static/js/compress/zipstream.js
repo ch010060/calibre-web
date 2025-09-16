@@ -19,10 +19,22 @@
 
   async function fetchRange(url, start, endExclusive) {
     const end = endExclusive - 1;
-    const res = await fetch(url, { headers: { Range: `bytes=${start}-${end}` } });
+    let res = await fetch(url, { headers: { Range: `bytes=${start}-${end}` } });
+    // Fallbacks for servers that ignore or reject ranges
+    if (res.status === 416) {
+      // Requested range not satisfiable: fetch full file and slice
+      res = await fetch(url);
+    }
     if (!(res.status === 206 || res.status === 200)) throw new Error("Range fetch failed");
     const buf = await res.arrayBuffer();
-    const u8 = new Uint8Array(buf);
+    let u8 = new Uint8Array(buf);
+    // If full content returned, slice the requested range
+    if (res.status === 200) {
+      const total = u8.length;
+      const s = Math.max(0, Math.min(start, total));
+      const e = Math.max(s, Math.min(endExclusive, total));
+      u8 = u8.subarray(s, e);
+    }
     try { if (progressCb && totalLenForProgress) progressCb(u8.byteLength, totalLenForProgress); } catch(_) {}
     return u8;
   }
@@ -209,7 +221,11 @@
 
     // Fetch tail via suffix range to locate EOCD; works without HEAD
     const tailWanted = 65536 + 22;
-    const tailRes = await fetch(url, { headers: { Range: `bytes=-${tailWanted}` } });
+    let tailRes = await fetch(url, { headers: { Range: `bytes=-${tailWanted}` } });
+    if (tailRes.status === 416) {
+      // Fallback: server rejected suffix range, fetch whole file
+      tailRes = await fetch(url);
+    }
     if (!(tailRes.status === 206 || tailRes.status === 200)) return null;
     const tailBuf = new Uint8Array(await tailRes.arrayBuffer());
     // Determine total length from Content-Range or Content-Length
