@@ -220,10 +220,119 @@ function loadFromArrayBuffer(ab) {
     var ext = (window.calibre && (window.calibre.archiveType||'').toLowerCase()) || '';
     var map = { 'cbz': 'zip', 'cbr': 'rar', 'cbt': 'tar', 'zip':'zip','rar':'rar','tar':'tar' };
     var needed = map[ext] ? [map[ext]] : ['rar','zip','tar'];
+    // Fallback via server endpoint for CBR if client-side RAR fails
+    function tryServerComicFallback() {
+        try {
+            if (!window.calibre || !window.calibre.bookId) return false;
+            var fmt = (window.calibre.archiveType||'').toLowerCase();
+            if (fmt !== 'cbr' && fmt !== 'rar') return false;
+
+            // Probe page 0 to learn total page count
+            var urlBase = '/ajax/getcomic/' + encodeURIComponent(window.calibre.bookId) + '/' + encodeURIComponent(fmt) + '/';
+            $.get(urlBase + '0')
+                .done(function(resp){
+                    try {
+                        var data = (typeof resp === 'string') ? JSON.parse(resp) : resp;
+                        if (!data || typeof data.last !== 'number') { console.warn('Server fallback: invalid response'); return; }
+
+                        totalImages = (data.last|0) + 1;
+                        imageFiles = new Array(totalImages);
+                        imageFilenames = new Array(totalImages);
+
+                        // Pre-populate thumbnails placeholders
+                        var $thumbs = $("#thumbnails");
+                        $thumbs.empty();
+                        for (let i = 0; i < totalImages; i++) {
+                            $thumbs.append("<li><a data-page='"+(i+1)+"'><img src='' alt='thumb'/><span>"+(i+1)+"</span></a></li>");
+                        }
+                        // Pre-create canvases
+                        for (let i = 0; i < totalImages; i++) drawCanvas(i);
+
+                        // Loader queue
+                        let loading = false;
+                        const loadQueue = [];
+                        const inQueue = new Set();
+                        function processQueue() {
+                            if (loading) return;
+                            const index = loadQueue.shift();
+                            if (typeof index === 'undefined') return;
+                            inQueue.delete(index);
+                            loading = true;
+                            $.get(urlBase + String(index))
+                                .done(function(r){
+                                    try {
+                                        var d = (typeof r === 'string') ? JSON.parse(r) : r;
+                                        if (!d || !d.content) throw new Error('empty');
+                                        var imgFile = { filename: d.name, dataURI: d.content };
+                                        imageFiles[index] = imgFile;
+                                        imageFilenames[index] = d.name;
+                                        setImage(imgFile.dataURI, $(".mainImage")[index], function(){
+                                            try {
+                                                var mainCanvas = $(".mainImage")[index];
+                                                if (mainCanvas) {
+                                                    var tw = 160;
+                                                    var th = Math.max(1, Math.round(mainCanvas.height * (tw / Math.max(1, mainCanvas.width))));
+                                                    var tcanvas = document.createElement('canvas');
+                                                    tcanvas.width = tw; tcanvas.height = th;
+                                                    var tx = tcanvas.getContext('2d');
+                                                    try { tx.imageSmoothingEnabled = true; tx.imageSmoothingQuality = 'high'; } catch(_) {}
+                                                    tx.drawImage(mainCanvas, 0, 0, tw, th);
+                                                    var thumbURL = tcanvas.toDataURL('image/jpeg', 0.7);
+                                                    var $thumbImg = $("#thumbnails a[data-page='" + (index + 1) + "'] img");
+                                                    if ($thumbImg.length) $thumbImg.attr('src', thumbURL);
+                                                }
+                                            } catch(_) {}
+                                        });
+                                        if (index === 0 && currentImage === 0) updatePage();
+                                    } catch(e) { console.warn('Server fallback decode failed', e); setImage('error', $(".mainImage")[index]); }
+                                })
+                                .fail(function(){ setImage('error', $(".mainImage")[index]); })
+                                .always(function(){ loading = false; setTimeout(processQueue, 0); });
+                        }
+                        function enqueue(i, priority) {
+                            if (i < 0 || i >= totalImages) return;
+                            if (imageFiles[i]) return;
+                            if (inQueue.has(i)) return;
+                            if (priority) loadQueue.unshift(i); else loadQueue.push(i);
+                            inQueue.add(i);
+                            processQueue();
+                        }
+                        // Kickoff
+                        if (currentImage < 0) currentImage = 0;
+                        if (currentImage >= totalImages) currentImage = totalImages - 1;
+                        enqueue(currentImage, true);
+                        var prefetch = parseInt(settings.prefetch, 10); if (isNaN(prefetch) || prefetch < 0) prefetch = 5;
+                        for (let k = 1; k <= prefetch; k++) enqueue(currentImage + k, false);
+
+                        // Hook updatePage to prioritize current page
+                        const originalUpdatePage = updatePage;
+                        updatePage = function() { originalUpdatePage(); enqueue(currentImage, true); for (let k = 1; k <= prefetch; k++) enqueue(currentImage + k, false); };
+
+                        // UI hooks
+                        $("#thumbnails").off('click.__kthoomThumb').on('click.__kthoomThumb', 'a', function(ev){ ev.preventDefault(); var p = $(this).data('page'); if (typeof p === 'number') { currentImage = p - 1; updatePage(); } });
+
+                        // Done
+                        updateProgress(100);
+                        updatePage();
+                    } catch(err) {
+                        console.warn('Server fallback init failed', err);
+                    }
+                })
+                .fail(function(){ console.warn('Server fallback unavailable'); });
+            return true;
+        } catch(e) { console.warn('Server fallback error', e); }
+        return false;
+    }
     loadArchiveFormats(needed, function() {
         // Open the file as an archive
         archiveOpenFile(ab, function (archive) {
-            if (!archive) return;
+            if (!archive) {
+                // If RAR failed, try server-backed fallback
+                if (map[ext] === 'rar') {
+                    tryServerComicFallback();
+                }
+                return;
+            }
 
             console.info('Uncompressing ' + archive.archive_type + ' ...');
             const entries = archive.entries.sort((a,b) => collator.compare(a.name, b.name));

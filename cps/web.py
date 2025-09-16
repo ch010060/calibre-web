@@ -206,7 +206,6 @@ def update_view():
     return "1", 200
 
 
-'''
 @web.route("/ajax/getcomic/<int:book_id>/<book_format>/<int:page>")
 @login_required
 def get_comic_book(book_id, book_format, page):
@@ -218,41 +217,44 @@ def get_comic_book(book_id, book_format, page):
             if bookformat.format.lower() == book_format.lower():
                 cbr_file = os.path.join(config.config_calibre_dir, book.path, bookformat.name) + "." + book_format
                 if book_format in ("cbr", "rar"):
-                    if feature_support['rar'] == True:
+                    try:
+                        # Import lazily to avoid hard dependency at module import time
+                        import rarfile  # pylint: disable=import-outside-toplevel
                         rarfile.UNRAR_TOOL = config.config_rarfile_location
                         try:
                             rf = rarfile.RarFile(cbr_file)
                             names = sort(rf.namelist())
                             extract = lambda page: rf.read(names[page])
-                        except:
+                        except Exception:
                             # rarfile not valid
                             log.error('Unrar binary not found, or unable to decompress file %s', cbr_file)
                             return "", 204
-                    else:
+                    except (ImportError, SyntaxError):
                         log.info('Unrar is not supported please install python rarfile extension')
                         # no support means return nothing
                         return "", 204
                 elif book_format in ("cbz", "zip"):
                     zf = zipfile.ZipFile(cbr_file)
-                    names=sort(zf.namelist())
+                    names = sort(zf.namelist())
                     extract = lambda page: zf.read(names[page])
                 elif book_format in ("cbt", "tar"):
+                    import tarfile  # pylint: disable=import-outside-toplevel
                     tf = tarfile.TarFile(cbr_file)
-                    names=sort(tf.getnames())
+                    names = sort(tf.getnames())
                     extract = lambda page: tf.extractfile(names[page]).read()
                 else:
                     log.error('unsupported comic format')
                     return "", 204
 
+                import codecs  # pylint: disable=import-outside-toplevel
                 b64 = codecs.encode(extract(page), 'base64').decode()
-                ext = names[page].rpartition('.')[-1]
+                ext = names[page].rpartition('.')[-1].lower()
                 if ext not in ('png', 'gif', 'jpg', 'jpeg', 'webp', 'avif'):
                     ext = 'png'
-                extractedfile="data:image/" + ext + ";base64," + b64
-                fileData={"name": names[page], "page":page, "last":len(names)-1, "content": extractedfile}
+                extractedfile = "data:image/" + ext + ";base64," + b64
+                fileData = {"name": names[page], "page": page, "last": len(names) - 1, "content": extractedfile}
                 return make_response(json.dumps(fileData))
         return "", 204
-'''
 
 
 # ################################### Typeahead ##################################################################
