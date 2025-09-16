@@ -36,12 +36,23 @@ html, body {
   position: relative;
 }
 
+#sidebar li {
+  position: relative; /* anchor for page number badge */
+  min-height: 120px;  /* ensure placeholder tiles are visible before thumbs load */
+}
+
 #sidebar a {
   display: inline-block;
   position: relative;
   cursor: pointer;
   padding: 4px;
   transition: all 0.2s ease;
+}
+
+/* Make each thumbnail tile fully clickable even before image loads */
+#thumbnails a {
+  display: block;
+  min-height: 120px;
 }
 
 #sidebar a:hover,
@@ -58,6 +69,10 @@ html, body {
 #sidebar li img {
   display: block;
   max-height: 200px;
+  max-width: 100%;
+  height: auto;
+  width: auto;
+  margin: 0 auto;
 }
 
 #sidebar li img + span {

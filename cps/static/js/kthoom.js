@@ -234,6 +234,22 @@ function loadFromArrayBuffer(ab) {
             imageFiles = new Array(totalImages);
             imageFilenames = new Array(totalImages);
 
+            // Pre-populate the TOC thumbnails with placeholders for all pages
+            try {
+                var $thumbs = $("#thumbnails");
+                $thumbs.empty();
+                for (let i = 0; i < totalImages; i++) {
+                    $thumbs.append(
+                        "<li>"+
+                        "<a data-page='"+(i+1)+"'>"+
+                        "<img src='' alt='thumb'/>"+
+                        "<span>"+(i+1)+"</span>"+
+                        "</a>"+
+                        "</li>"
+                    );
+                }
+            } catch(popErr) { console.warn('Populate thumbnails failed', popErr); }
+
             // Pre-create canvases for all pages so layout is immediate
             for (let i = 0; i < totalImages; i++) {
                 drawCanvas(i);
@@ -282,6 +298,7 @@ function loadFromArrayBuffer(ab) {
                                     tcanvas.width = tw;
                                     tcanvas.height = th;
                                     var tx = tcanvas.getContext('2d');
+                                    try { tx.imageSmoothingEnabled = true; tx.imageSmoothingQuality = 'high'; } catch(_) {}
                                     tx.drawImage(mainCanvas, 0, 0, tw, th);
                                     var thumbURL = tcanvas.toDataURL('image/jpeg', 0.7);
                                     var $thumbImg = $("#thumbnails a[data-page='" + (index + 1) + "'] img");
@@ -298,20 +315,7 @@ function loadFromArrayBuffer(ab) {
                             } catch(revokeErr) { console.warn('Revoke failed', revokeErr); }
                         });
 
-                        // Add thumbnail in correct order position (placeholder, replaced after render)
-                        var liHtml = "<li>" +
-                                     "<a data-page='" + (index + 1) + "'>" +
-                                     "<img src='' alt='thumb'/>" +
-                                     "<span>" + (index + 1) + "</span>" +
-                                     "</a>" +
-                                     "</li>";
-                        var $thumbs = $("#thumbnails");
-                        var $items = $thumbs.children("li");
-                        if (index >= $items.length) {
-                            $thumbs.append(liHtml);
-                        } else {
-                            $($items[index]).before(liHtml);
-                        }
+                        // Thumbnails list is pre-populated; just update this page's image when ready
 
                         loadedCount++;
                         updateProgress(Math.round(loadedCount / totalImages * 100), 'Decoding…');
@@ -364,22 +368,23 @@ function loadFromArrayBuffer(ab) {
 }
 
 function scrollTocToActive() {
-    $(".page").text((currentImage + 1 ) + "/" + totalImages);
+    try {
+        $(".page").text((currentImage + 1) + "/" + totalImages);
 
-    // Mark the current page in the TOC
-    var $active = $("#tocView a[data-page]")
-        // Remove the currently active thumbnail
-        .removeClass("active")
-        // Find the new one
-        .filter("[data-page=" + (currentImage + 1) + "]")
-        // Set it to active
-        .addClass("active");
-
-    // Scroll to the thumbnail in the TOC on page change (if it exists)
-    var pos = $active.position();
-    if (pos) {
-        $("#tocView").stop().animate({ scrollTop: pos.top }, 200);
-    }
+        var $toc = $("#tocView");
+        // Mark the current page in the TOC
+        $("#tocView a[data-page]").removeClass("active");
+        var $link = $("#tocView a[data-page='" + (currentImage + 1) + "']");
+        if ($link.length) {
+            $link.addClass("active");
+            // Align the active item to the top of the visible area to avoid mis-centering during dynamic image loads
+            var li = $link.closest('li')[0];
+            if (li && $toc.length) {
+                var targetTop = li.offsetTop; // relative to the scroll container
+                $toc.stop().animate({ scrollTop: Math.max(0, targetTop) }, 180);
+            }
+        }
+    } catch(err) { /* ignore */ }
 }
 
 function updatePage() {
@@ -1172,6 +1177,36 @@ async function init(filename) {
                 // Prepare arrays
                 imageFiles = new Array(totalImages);
                 imageFilenames = new Array(totalImages);
+                // Pre-populate thumbnails for all pages
+                try {
+                    var $thumbs = $("#thumbnails");
+                    $thumbs.empty();
+                    for (let i = 0; i < totalImages; i++) {
+                        $thumbs.append(
+                            "<li>"+
+                            "<a data-page='"+(i+1)+"'>"+
+                            "<img src='' alt='thumb'/>"+
+                            "<span>"+(i+1)+"</span>"+
+                            "</a>"+
+                            "</li>"
+                        );
+                    }
+                } catch(popErr) { console.warn('Populate thumbnails failed', popErr); }
+                // Pre-populate thumbnails list for all pages so TOC always shows full range
+                try {
+                    var $thumbs = $("#thumbnails");
+                    $thumbs.empty();
+                    for (let i = 0; i < totalImages; i++) {
+                        $thumbs.append(
+                            "<li>"+
+                            "<a data-page='"+(i+1)+"'>"+
+                            "<img src='' alt='thumb'/>"+
+                            "<span>"+(i+1)+"</span>"+
+                            "</a>"+
+                            "</li>"
+                        );
+                    }
+                } catch(popErr) { console.warn('Populate thumbnails failed', popErr); }
                 for (let i = 0; i < totalImages; i++) drawCanvas(i);
 
                 // Use same queueing logic as full-download path
@@ -1216,16 +1251,7 @@ async function init(filename) {
                                     } catch(thumbErr) { console.warn('Thumbnail generation failed', thumbErr); }
                                     try { if (imgFile.dataURI && imgFile.dataURI.indexOf('blob:') === 0) URL.revokeObjectURL(imgFile.dataURI); imgFile.dataURI = null; } catch(e) {}
                                 });
-                                // Insert thumbnail placeholder in order if not present
-                                var $thumbs = $("#thumbnails");
-                                var $items = $thumbs.children("li");
-                                if ($items.length <= index) {
-                                    $thumbs.append("<li><a data-page='" + (index + 1) + "'>" +
-                                                   "<img src='' alt='thumb'/><span>" + (index + 1) + "</span></a></li>");
-                                } else if (!$items.eq(index).length) {
-                                    $($items[index]).before("<li><a data-page='" + (index + 1) + "'>" +
-                                                           "<img src='' alt='thumb'/><span>" + (index + 1) + "</span></a></li>");
-                                }
+                                // Thumbnails already pre-populated; no need to insert placeholders here
                                 loadedCount++;
                         updateProgress(Math.round(loadedCount / totalImages * 100), 'Decoding…');
                                 if (index === 0 && currentImage === 0) updatePage();
@@ -1259,6 +1285,41 @@ async function init(filename) {
                     updatePage();
                 })();
 
+                // Generate ALL thumbnails eagerly (sequential to limit memory)
+                try {
+                    (function generateAllThumbs(i){
+                        if (!entries || i >= entries.length) return;
+                        entries[i].readData(function(d){
+                            try {
+                                var tmp = new kthoom.ImageFile({ filename: entries[i].name, fileData: d });
+                                if (tmp.dataURI) {
+                                    var img = new Image();
+                                    img.onload = function(){
+                                        try {
+                                            var tw = 160;
+                                            var th = Math.max(1, Math.round(img.height * (tw / Math.max(1, img.width))));
+                                            var tcanvas = document.createElement('canvas');
+                                            tcanvas.width = tw; tcanvas.height = th;
+                                            var tx = tcanvas.getContext('2d');
+                                            try { tx.imageSmoothingEnabled = true; tx.imageSmoothingQuality = 'high'; } catch(_) {}
+                                            tx.drawImage(img, 0, 0, tw, th);
+                                            var thumbURL = tcanvas.toDataURL('image/jpeg', 0.7);
+                                            var $thumbImg = $("#thumbnails a[data-page='" + (i + 1) + "'] img");
+                                            if ($thumbImg.length) $thumbImg.attr('src', thumbURL);
+                                        } catch(_){}
+                                        try { if (tmp.dataURI && tmp.dataURI.indexOf('blob:') === 0) URL.revokeObjectURL(tmp.dataURI); } catch(_){}
+                                        setTimeout(function(){ generateAllThumbs(i+1); }, 0);
+                                    };
+                                    img.onerror = function(){ setTimeout(function(){ generateAllThumbs(i+1); }, 0); };
+                                    img.src = tmp.dataURI;
+                                } else {
+                                    setTimeout(function(){ generateAllThumbs(i+1); }, 0);
+                                }
+                            } catch(_) { setTimeout(function(){ generateAllThumbs(i+1); }, 0); }
+                        });
+                    })(0);
+                } catch(_) {}
+
                 // Hook events and handlers as usual
                 $(document).keydown(keyHandler);
                 $(window).resize(function() { updateScale(); });
@@ -1268,7 +1329,9 @@ async function init(filename) {
                     $(this).toggleClass("icon-menu icon-right");
                     setTimeout(function() {
                         $("#main:not(.closed) #mainContent, #sidebar.open #tocView").focus();
+                        // Scroll active TOC item after the drawer finishes animating
                         scrollTocToActive();
+                        setTimeout(scrollTocToActive, 200);
                     }, 500);
                 });
                 $("#setting").click(function() { $("#settings-modal").toggleClass("md-show"); });
@@ -1348,6 +1411,7 @@ async function init(filename) {
             // Focus on the TOC or the main content area, depending on which is open
             $("#main:not(.closed) #mainContent, #sidebar.open #tocView").focus();
             scrollTocToActive();
+            setTimeout(scrollTocToActive, 200);
         }, 500);
     });
 
