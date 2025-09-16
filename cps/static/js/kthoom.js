@@ -1056,6 +1056,63 @@ function setRead() {
 
 async function init(filename) {
     var request = new XMLHttpRequest();
+    // Debounce to avoid double-trigger from tap+click on touch devices
+    var lastFlipAt = 0;
+    // Helper to map a pointer (mouse/touch) location on the canvas to a flip action
+    function flipByPointer(event, target) {
+        var now = Date.now ? Date.now() : (new Date()).getTime();
+        if (now - lastFlipAt < 200) return; // ignore rapid duplicate events
+        var evt = event || window.event;
+        var canvasEl = (target && target.tagName && target.tagName.toLowerCase() === 'canvas')
+            ? target
+            : ($('.mainImage').eq(currentImage)[0] || (evt.target || target));
+        if (!canvasEl) return;
+        var rect = canvasEl.getBoundingClientRect ? canvasEl.getBoundingClientRect() : { left: 0, top: 0, width: canvasEl.clientWidth||0, height: canvasEl.clientHeight||0 };
+        var comicWidth = rect.width || canvasEl.clientWidth || 0;
+        var comicHeight = rect.height || canvasEl.clientHeight || 0;
+        var clientX = (typeof evt.clientX === 'number') ? evt.clientX : (evt.originalEvent && evt.originalEvent.clientX);
+        var clientY = (typeof evt.clientY === 'number') ? evt.clientY : (evt.originalEvent && evt.originalEvent.clientY);
+        if ((clientX == null || clientY == null) && evt.originalEvent && evt.originalEvent.changedTouches && evt.originalEvent.changedTouches[0]) {
+            clientX = evt.originalEvent.changedTouches[0].clientX;
+            clientY = evt.originalEvent.changedTouches[0].clientY;
+        }
+        if (clientX == null && typeof evt.pageX === 'number') clientX = evt.pageX;
+        if (clientY == null && typeof evt.pageY === 'number') clientY = evt.pageY;
+        if (clientX == null || clientY == null) return;
+        var clickX = clientX - (rect.left || 0);
+        var clickY = clientY - (rect.top || 0);
+        if (isFinite(comicWidth) && comicWidth > 0) {
+            if (clickX < 0) clickX = 0; else if (clickX > comicWidth) clickX = comicWidth;
+        }
+        if (isFinite(comicHeight) && comicHeight > 0) {
+            if (clickY < 0) clickY = 0; else if (clickY > comicHeight) clickY = comicHeight;
+        }
+        var clickedLeft = false;
+        switch (settings.rotateTimes) {
+            case 0:
+                if (settings.pageDisplay === 0) { clickedLeft = clickX < (comicWidth / 2); }
+                else { clickedLeft = clickY < (comicHeight / 2); }
+                break;
+            case 1:
+                if (settings.pageDisplay === 0) { clickedLeft = clickY < (comicHeight / 2); }
+                else { clickedLeft = clickX > (comicWidth / 2); }
+                break;
+            case 2:
+                if (settings.pageDisplay === 0) { clickedLeft = clickX > (comicWidth / 2); }
+                else { clickedLeft = clickY > (comicHeight / 2); }
+                break;
+            case 3:
+                if (settings.pageDisplay === 0) { clickedLeft = clickY > (comicHeight / 2); }
+                else { clickedLeft = clickX < (comicWidth / 2); }
+                break;
+        }
+        if (settings.pageDisplay === 0) {
+            if (clickedLeft) { showLeftPage(); } else { showRightPage(); }
+        } else {
+            if (clickedLeft) { showPrevPage(); } else { showNextPage(); }
+        }
+        lastFlipAt = now;
+    }
     // Try streaming open first for large CBZ when range + DecompressionStream are available
     try {
         if (typeof ZipStream !== 'undefined' && typeof DecompressionStream !== 'undefined') {
@@ -1215,7 +1272,13 @@ async function init(filename) {
                 });
                 $(".closer, .overlay").click(function() { $(".md-show").removeClass("md-show"); $("#mainContent").focus(); });
                 $("#mainContent").focus();
-                $("#mainContent").swipe({ swipeRight: function(){showLeftPage();}, swipeLeft: function(){showRightPage();} });
+                $("#mainContent").swipe({
+                    swipeRight: function(){ showLeftPage(); },
+                    swipeLeft: function(){ showRightPage(); },
+                    tap: function(e, target){ flipByPointer(e, target); },
+                    allowPageScroll: "auto"
+                });
+                $("#mainContent").on('click', function(e){ flipByPointer(e, e.target); });
                 return; // streamed path handled, don't use XHR
             }
         }
@@ -1365,79 +1428,22 @@ async function init(filename) {
         }
     });
 
-    $("#mainContent").swipe( {
-        swipeRight:function() {
-            showLeftPage();
-        },
-        swipeLeft:function() {
-            showRightPage();
-        },
-    });
-    $("#mainContent").click(function(evt) {
-        // Firefox does not support offsetX/Y so we have to manually calculate
-        // where the user clicked in the image.
-        var mainContentWidth = $("#mainContent").width();
-        var mainContentHeight = $("#mainContent").height();
-        var comicWidth = evt.target.clientWidth;
-        var comicHeight = evt.target.clientHeight;
-        var offsetX = (mainContentWidth - comicWidth) / 2;
-        var offsetY = (mainContentHeight - comicHeight) / 2;
-        var clickX = evt.offsetX ? evt.offsetX : (evt.clientX - offsetX);
-        var clickY = evt.offsetY ? evt.offsetY : (evt.clientY - offsetY);
+    // flipByPointer is defined earlier in init; duplicate removed
 
-        // Determine if the user clicked/tapped the left side or the
-        // right side of the page.
-        // 1. flip left/right in single page mode
-        // 2. flip up/down in long-strip page mode
-        var clickedLeft = false;
-        switch (settings.rotateTimes) {
-            case 0:
-                if(settings.pageDisplay === 0) {
-                    clickedLeft = clickX < (comicWidth / 2);
-                }
-                else {
-                    clickedLeft = clickY < (comicWidth / 2);
-                }
-                break;
-            case 1:
-                if(settings.pageDisplay === 0) {
-                    clickedLeft = clickY < (comicHeight / 2);
-                }
-                else {
-                    clickedLeft = clickX > (comicHeight / 2);
-                }
-                break;
-            case 2:
-                if(settings.pageDisplay === 0) {
-                    clickedLeft = clickX > (comicWidth / 2);
-                }
-                else {
-                    clickedLeft = clickY > (comicWidth / 2);
-                }
-                break;
-            case 3:
-                if(settings.pageDisplay === 0) {
-                    clickedLeft = clickY > (comicHeight / 2);
-                }
-                else {
-                    clickedLeft = clickX < (comicHeight / 2);
-                }
-                break;
-        }
-        if(settings.pageDisplay === 0) {
-            if (clickedLeft) {
-                showLeftPage();
-            } else {
-                showRightPage();
-            }
-        }
-        else {
-            if (clickedLeft) {
-                showPrevPage();
-            } else {
-                showNextPage();
-            }
-        }
+    $("#mainContent").swipe({
+        swipeRight: function() { showLeftPage(); },
+        swipeLeft: function() { showRightPage(); },
+        tap: function(e, target) {
+            // Handle taps on touch devices where click may be suppressed
+            flipByPointer(e, target);
+        },
+        // Avoid blocking taps/clicks from bubbling when not handled
+        allowPageScroll: "auto"
+    });
+
+    // Mouse click support
+    $("#mainContent").on('click', function(e) {
+        flipByPointer(e, e.target);
     });
 
     // Scrolling up/down will update current image if a new image is into view (for Long Strip Display)
