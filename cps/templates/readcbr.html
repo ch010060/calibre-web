@@ -38,7 +38,7 @@
   <div id="main" class="main">
     <div id="titlebar" class="main">
       <div id="opener">
-        <a id="slider" class="icon-menu">Menu</a>
+        <a id="slider" class="icon-menu" aria-label="{{ _('Menu') }}"></a>
       </div>
       <div id="metainfo">
         <span id="book-title">{{ title | shortentitle }}</span>
@@ -46,8 +46,8 @@
         <span id="chapter-title"></span>
       </div>
       <div id="title-controls">
-        <a id="setting" class="icon-cog">Settings</a>
-        <a id="fullscreen" class="icon-resize-full">Fullscreen</a>
+        <a id="setting" class="icon-cog" aria-label="{{ _('Settings') }}"></a>
+        <a id="fullscreen" class="icon-resize-full" aria-label="{{ _('Fullscreen') }}"></a>
       </div>
       <div id="progress" role="progressbar" class="loading">
         <div class="bar-load from-left">

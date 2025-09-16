@@ -78,7 +78,7 @@ html, body {
 #progress {
   position: absolute;
   display: inline;
-  top: 0;
+  top: 0; /* place progress at top edge of titlebar */
   left: 0;
   right: 0;
   min-height: 4px;
@@ -179,7 +179,8 @@ html, body {
 #titlebar {
   min-height: 25px;
   height: auto;
-  padding-top: env(safe-area-inset-top);
+  /* Reserve space for the progress bar so it doesn't overlap the title */
+  padding-top: calc(env(safe-area-inset-top) + 12px);
 }
 
 /* Two-pages layout: show two canvases side-by-side */

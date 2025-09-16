@@ -191,12 +191,26 @@ kthoom.ImageFile = function(file) {
 };
 
 function initProgressClick() {
-    $("#progress").click(function(e) {
-        var offset = $(this).offset();
-        var x = e.pageX - offset.left;
-        var rate = settings.direction === 0 ? x / $(this).width() : 1 - x / $(this).width();
-        currentImage = Math.max(1, Math.ceil(rate * totalImages)) - 1;
-        updatePage();
+    $("#progress").off('click.__kthoom').on('click.__kthoom', function(e) {
+        try {
+            var clientX = e.clientX || (e.originalEvent && e.originalEvent.clientX) || e.pageX;
+            if (clientX == null) return;
+            // Ignore clicks that fall under left/right controls or title area
+            var ignore = false;
+            ['#opener', '#title-controls', '#metainfo', '#book-title'].forEach(function(sel){
+                var el = document.querySelector(sel);
+                if (!el) return;
+                var r = el.getBoundingClientRect();
+                if (clientX >= r.left && clientX <= r.right) ignore = true;
+            });
+            if (ignore) return; // do not seek when tapping near controls/title
+
+            var offset = $(this).offset();
+            var x = e.pageX - offset.left;
+            var rate = settings.direction === 0 ? x / $(this).width() : 1 - x / $(this).width();
+            currentImage = Math.max(1, Math.ceil(rate * totalImages)) - 1;
+            updatePage();
+        } catch(err) { console.warn('progress click ignored:', err); }
     });
 }
 
