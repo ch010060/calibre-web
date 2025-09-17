@@ -77,7 +77,7 @@ var settings = {
     arrow: 1, // 0 = Hide Arrow, 1 = Show Arrow
     wheelflip: 0, // 0 = Disable wheel flip, 1 = Enable wheel flip
     autoClose: 0, // 0 = Disable auto close, 1 = Enable auto close
-    autoFullscreen: 1, // 0 = Disabled, 1 = Enabled (attempt fullscreen on open)
+    autoFullscreen: 0, // 0 = Disabled, 1 = Enabled (attempt fullscreen on open)
     pageDisplay: 0, // 0 = Single Page, 1 = Long Strip, 2 = Two Pages
     prefetch: 5, // number of pages to prefetch ahead
     upscaleMode: 'sharpened', // 'crisp' | 'smooth' | 'sharpened'
