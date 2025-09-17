@@ -309,19 +309,24 @@
     </script>
   <script>
     $(window).on('wheel', function(event){
+      // Only react to vertical wheel movement
+      var dy = event && event.originalEvent ? event.originalEvent.deltaY : 0;
+      if (dy === 0) return;
 
-      // deltaY obviously records vertical scroll, deltaX and deltaZ exist too.
-      // this condition makes sure it's vertical scrolling that happened
-      if(event.originalEvent.deltaY !== 0 && settings.wheelflip){
+      // In Long Strip (stripe) mode, always flip page on wheel to avoid prefetch issues
+      var isStripe = (typeof settings !== 'undefined' && settings.pageDisplay === 1);
+      var allowWheelFlip = isStripe || (typeof settings !== 'undefined' && settings.wheelflip);
+      if (!allowWheelFlip) return;
 
-        if(event.originalEvent.deltaY < 0){
-          // wheeled up
-          showLeftPage();
-        }
-        else {
-          // wheeled down
-          showRightPage();
-        }
+      // Prevent native scroll when we turn wheel into page flips (especially in stripe mode)
+      try { event.preventDefault(); } catch(_) {}
+
+      if (dy < 0) {
+        // wheeled up
+        if (isStripe) { showPrevPage(); } else { showLeftPage(); }
+      } else {
+        // wheeled down
+        if (isStripe) { showNextPage(); } else { showRightPage(); }
       }
     });
   </script>
