@@ -115,9 +115,8 @@ $("#archived_cb").on("change", function() {
 (function(){
     var cover = document.getElementById('detailcover');
     if (!cover) return;
-    // Skip on touch-centric devices to avoid accidental popups
-    if ('ontouchstart' in window || navigator.maxTouchPoints > 0) return;
 
+    var isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
     var win = null, img = null;
     var src = cover.getAttribute('src');
     var offset = 16; // px from cursor
@@ -137,29 +136,26 @@ $("#archived_cb").on("change", function() {
 
     function clamp(val, min, max){ return Math.max(min, Math.min(max, val)); }
 
-    function position(px, py){
-        if (!win || !img) return;
+    function computeSize(){
         var vw = window.innerWidth || document.documentElement.clientWidth || 1024;
         var vh = window.innerHeight || document.documentElement.clientHeight || 768;
-
-        // Measure intended size (respect CSS max constraints via natural size)
-        var naturalW = img.naturalWidth || 600;
-        var naturalH = img.naturalHeight || 900;
+        var naturalW = (img && img.naturalWidth) || 600;
+        var naturalH = (img && img.naturalHeight) || 900;
         var maxW = Math.floor(vw * 0.6);
         var maxH = Math.floor(vh * 0.9);
         var scale = Math.min(1, maxW / naturalW, maxH / naturalH);
-        var w = Math.floor(naturalW * scale);
-        var h = Math.floor(naturalH * scale);
+        return { w: Math.floor(naturalW * scale), h: Math.floor(naturalH * scale), vw: vw, vh: vh };
+    }
 
-        // Default to right-bottom of cursor
+    function positionAt(px, py){
+        if (!win || !img) return;
+        var s = computeSize();
+        var w = s.w, h = s.h, vw = s.vw, vh = s.vh;
         var left = px + offset;
         var top = py + offset;
-        // If overflowing right, flip to left side
         if (left + w + offset > vw) left = px - offset - w;
-        // Clamp to viewport
         left = clamp(left, 8, vw - w - 8);
         top = clamp(top, 8, vh - h - 8);
-
         win.style.left = left + 'px';
         win.style.top = top + 'px';
         win.style.width = w + 'px';
@@ -168,13 +164,57 @@ $("#archived_cb").on("change", function() {
         img.style.height = '100%';
     }
 
-    function show(e){ ensureWindow(); win.classList.add('visible'); position(e.clientX, e.clientY); }
-    function move(e){ if (!win) return; position(e.clientX, e.clientY); }
+    function positionNearCover(){
+        if (!win || !img) return;
+        var s = computeSize();
+        var w = s.w, h = s.h, vw = s.vw, vh = s.vh;
+        var r = cover.getBoundingClientRect();
+        var preferRight = (r.right + offset + w + 8) <= vw;
+        var left = preferRight ? (r.right + offset) : (r.left - offset - w);
+        var top = r.top; // align to top of cover
+        left = clamp(left, 8, vw - w - 8);
+        top = clamp(top, 8, vh - h - 8);
+        win.style.left = left + 'px';
+        win.style.top = top + 'px';
+        win.style.width = w + 'px';
+        win.style.height = h + 'px';
+        img.style.width = '100%';
+        img.style.height = '100%';
+    }
+
+    function showAtPointer(e){ ensureWindow(); win.classList.add('visible'); positionAt(e.clientX, e.clientY); }
+    function move(e){ if (!win) return; positionAt(e.clientX, e.clientY); }
+    function showNearCover(){ ensureWindow(); win.classList.add('visible'); positionNearCover(); }
     function hide(){ if (win) win.classList.remove('visible'); }
 
-    cover.addEventListener('mouseenter', show);
-    cover.addEventListener('mousemove', move);
-    cover.addEventListener('mouseleave', hide);
+    if (!isTouch) {
+        cover.addEventListener('mouseenter', showAtPointer);
+        cover.addEventListener('mousemove', move);
+        cover.addEventListener('mouseleave', hide);
+        cover.addEventListener('click', function(e){
+            // Also show on click for non-touch; don't block fullscreen
+            showAtPointer(e);
+        });
+    } else {
+        // Touch devices: tap to toggle zoom window instead of fullscreen
+        // Use capture to prevent the fullscreen.js click handler
+        cover.addEventListener('click', function(e){
+            e.preventDefault();
+            e.stopPropagation();
+            if (win && win.classList.contains('visible')) {
+                hide();
+            } else {
+                showNearCover();
+            }
+        }, true);
+        // Hide when tapping outside
+        document.addEventListener('click', function(e){
+            if (!win || !win.classList.contains('visible')) return;
+            if (cover.contains(e.target)) return;
+            hide();
+        }, true);
+    }
+
     window.addEventListener('scroll', hide, { passive: true });
     window.addEventListener('resize', hide);
 })();
