@@ -328,8 +328,15 @@ body.pseudo-fullscreen {
   overflow: hidden;
   background: #000;
 }
-body.pseudo-fullscreen #titlebar,
+/* Hide sidebar entirely; compress titlebar to zero height so exit control can be shown */
 body.pseudo-fullscreen #sidebar { display: none !important; }
+body.pseudo-fullscreen #titlebar {
+  height: 0 !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+}
 body.pseudo-fullscreen #main {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
@@ -353,11 +360,15 @@ html:-webkit-full-screen body {
   margin: 0 !important;
   padding: 0 !important; /* remove safe-area padding in native fullscreen */
 }
-html:fullscreen #titlebar,
-html:-webkit-full-screen #titlebar,
 html:fullscreen #sidebar,
-html:-webkit-full-screen #sidebar {
-  display: none !important;
+html:-webkit-full-screen #sidebar { display: none !important; }
+html:fullscreen #titlebar,
+html:-webkit-full-screen #titlebar {
+  height: 0 !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  overflow: hidden !important;
 }
 html:fullscreen #main,
 html:-webkit-full-screen #main {
@@ -368,4 +379,20 @@ html:-webkit-full-screen #main {
   border-radius: 0; /* avoid rounded corners/gaps */
   box-shadow: none; /* avoid inner shadow in fullscreen */
   z-index: 9999;
+}
+
+/* Floating exit control remains accessible in fullscreen */
+html:fullscreen #fullscreen,
+html:-webkit-full-screen #fullscreen,
+body.pseudo-fullscreen #fullscreen {
+  position: fixed;
+  top: calc(env(safe-area-inset-top) + 8px);
+  right: calc(env(safe-area-inset-right) + 8px);
+  z-index: 10000;
+  opacity: 0.95;
+  pointer-events: auto;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  padding: 6px;
 }
