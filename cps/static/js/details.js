@@ -218,3 +218,106 @@ $("#archived_cb").on("change", function() {
     window.addEventListener('scroll', hide, { passive: true });
     window.addEventListener('resize', hide);
 })();
+
+// Intercept "Read in Browser" links and open reader in an overlay iframe,
+// requesting fullscreen within the same user gesture to satisfy browser policies.
+(function(){
+    function isModifiedClick(e){
+        return e.which === 2 || e.button === 1 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey;
+    }
+    function isReadHref(href){
+        try { return typeof href === 'string' && href.indexOf('/read/') === 0 || href.indexOf(window.location.origin + '/read/') === 0; } catch(_){ return false; }
+    }
+    function requestFS(el){
+        if (!el) return false;
+        try {
+            // Prefer requesting on the documentElement for better compatibility
+            var docEl = document.documentElement;
+            var reqEl = (docEl.requestFullscreen || docEl.webkitRequestFullscreen || docEl.mozRequestFullScreen || docEl.msRequestFullscreen) ? docEl : el;
+            var req = reqEl.requestFullscreen || reqEl.webkitRequestFullscreen || reqEl.mozRequestFullScreen || reqEl.msRequestFullscreen;
+            if (typeof req === 'function') {
+                try { el.setAttribute('tabindex','-1'); el.focus(); } catch(_){}
+                var r = req.call(reqEl, { navigationUI: 'hide' });
+                // If Promise-like, return true and let caller ignore
+                return true;
+            }
+        } catch(_){}
+        return false;
+    }
+    function exitFS(){
+        try {
+            var ex = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
+            if (typeof ex === 'function') ex.call(document);
+        } catch(_){}
+    }
+    function openReaderOverlay(url){
+        var overlay = document.createElement('div');
+        overlay.className = 'reader-overlay';
+        var iframe = document.createElement('iframe');
+        iframe.className = 'reader-frame';
+        iframe.setAttribute('allowfullscreen', '');
+        iframe.setAttribute('allow', 'fullscreen');
+        iframe.src = url;
+        var close = document.createElement('button');
+        close.className = 'reader-close';
+        close.setAttribute('aria-label', 'Close');
+        close.textContent = '×';
+        overlay.appendChild(iframe);
+        overlay.appendChild(close);
+        document.body.appendChild(overlay);
+        // Request fullscreen immediately while still in the same user gesture
+        requestFS(overlay);
+
+        var popped = false;
+        function cleanup(){
+            try { exitFS(); } catch(_){}
+            try { window.removeEventListener('keydown', onKey, true); } catch(_){}
+            try { window.removeEventListener('popstate', onPop, true); } catch(_){}
+            if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
+        }
+        function closeOverlay(pushBack){
+            cleanup();
+            if (pushBack && !popped) {
+                try { popped = true; history.back(); } catch(_){}
+            }
+        }
+        function onKey(e){ if (e.key === 'Escape' || e.keyCode === 27) closeOverlay(true); }
+        function onPop(){ closeOverlay(false); }
+
+        window.addEventListener('keydown', onKey, true);
+        try { history.pushState({ readerOverlay: true }, '', '#reader'); } catch(_){}
+        window.addEventListener('popstate', onPop, true);
+        close.addEventListener('click', function(e){ e.preventDefault(); closeOverlay(true); });
+
+        // Attempt again after wiring listeners (still within the same tick)
+        requestFS(overlay);
+        try { iframe.focus(); } catch(_){}
+    }
+
+    function clickHandler(e){
+        var a = e.currentTarget || this;
+        var href = a && a.getAttribute('href');
+        if (!href) return;
+        // Normalize href
+        try { if (href.indexOf('http') === 0) href = new URL(href).pathname + new URL(href).search; } catch(_){ }
+        if (!isReadHref(href) || isModifiedClick(e) || a.getAttribute('target') === '_blank') return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+        openReaderOverlay(a.href);
+    }
+
+    // Delegate clicks for both single and dropdown read links
+    document.addEventListener('click', function(e){
+        var t = e.target;
+        if (!t) return;
+        // bubble up to anchor
+        while (t && t !== document && t.tagName !== 'A') t = t.parentNode;
+        if (!t || t.tagName !== 'A') return;
+        var href = t.getAttribute('href') || '';
+        if (!href) return;
+        if (isReadHref(href)) {
+            clickHandler.call(t, e);
+        }
+    }, true);
+})();

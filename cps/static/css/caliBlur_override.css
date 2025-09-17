@@ -61,6 +61,36 @@ body.serieslist.grid-view div.container-fluid > div > div.col-sm-10::before {
   max-height: 90vh !important;
 }
 
+/* Reader overlay (detail page): iframe fullscreen overlay */
+.reader-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 100000 !important;
+  background: #000 !important;
+}
+.reader-overlay iframe.reader-frame {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  border: 0 !important;
+  display: block !important;
+}
+.reader-overlay .reader-close {
+  position: fixed !important;
+  top: calc(env(safe-area-inset-top) + 8px) !important;
+  right: calc(env(safe-area-inset-right) + 8px) !important;
+  z-index: 100001 !important;
+  padding: 6px 10px !important;
+  border-radius: 8px !important;
+  background: rgba(0,0,0,0.35) !important;
+  color: #fff !important;
+  border: 1px solid rgba(255,255,255,0.35) !important;
+  font-size: 18px !important;
+  line-height: 1 !important;
+  cursor: pointer !important;
+}
+
 /* Allow the cover column to grow with content (remove fixed height) */
 .single .col-sm-3.col-lg-3.col-xs-5 {
   height: auto !important;

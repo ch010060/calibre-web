@@ -77,6 +77,7 @@ var settings = {
     arrow: 1, // 0 = Hide Arrow, 1 = Show Arrow
     wheelflip: 0, // 0 = Disable wheel flip, 1 = Enable wheel flip
     autoClose: 0, // 0 = Disable auto close, 1 = Enable auto close
+    autoFullscreen: 1, // 0 = Disabled, 1 = Enabled (attempt fullscreen on open)
     pageDisplay: 0, // 0 = Single Page, 1 = Long Strip, 2 = Two Pages
     prefetch: 5, // number of pages to prefetch ahead
     upscaleMode: 'sharpened', // 'crisp' | 'smooth' | 'sharpened'
@@ -1493,6 +1494,78 @@ async function init(filename) {
                         });
                     }
                 })();
+                // Auto fullscreen if enabled: try immediately, else on first reader interaction; fallback to pseudo-fullscreen
+                (function(){
+                    try {
+                        var enabled = (parseInt(settings.autoFullscreen, 10) === 1) || (settings.autoFullscreen === true);
+                        if (!enabled) return;
+                        var $button = $("#fullscreen");
+                        var canFullscreen = (typeof screenfull !== "undefined" && screenfull && screenfull.isEnabled);
+
+                        function pseudo(){
+                            $('body').addClass('pseudo-fullscreen');
+                            $button.addClass('icon-resize-small').removeClass('icon-resize-full');
+                            $("#mainContent").focus();
+                        }
+                        function cleanup(){
+                            var els = [document.getElementById('mainContent'), document.getElementById('main'), window];
+                            ['pointerdown','click','touchstart'].forEach(function(ev){
+                                els.forEach(function(el){ if (el) el.removeEventListener(ev, armOnce, true); });
+                            });
+                            document.removeEventListener('keydown', armOnce, true);
+                        }
+                        function armOnce(e){
+                            // Ignore clicks on chrome controls (settings, menu, fullscreen button, close)
+                            var ig = ['setting','slider','fullscreen','closeTab'];
+                            if (e && e.target) {
+                                for (var i = 0; i < ig.length; i++) {
+                                    var el = document.getElementById(ig[i]);
+                                    if (el && (el === e.target || (el.contains && el.contains(e.target)))) return; // ignore
+                                }
+                                var tb = document.getElementById('titlebar');
+                                if (tb && (tb === e.target || (tb.contains && tb.contains(e.target)))) return; // ignore header
+                            }
+                            cleanup(); requestNow();
+                        }
+                        function arm(){
+                            var els = [document.getElementById('mainContent'), document.getElementById('main')];
+                            ['pointerdown','click','touchstart'].forEach(function(ev){
+                                els.forEach(function(el){ if (el) el.addEventListener(ev, armOnce, true); });
+                            });
+                            document.addEventListener('keydown', armOnce, true);
+                        }
+                        function requestNow(){
+                            if (canFullscreen) {
+                                try {
+                                    var p = screenfull.request(document.documentElement);
+                                    if (p && typeof p.then === 'function') {
+                                        p.then(function(){ cleanup(); $("#mainContent").focus(); }).catch(function(){ /* ignore */ });
+                                    }
+                                } catch(_) {}
+                            } else {
+                                pseudo();
+                            }
+                        }
+                        if (canFullscreen) {
+                            var done = false;
+                            try {
+                                var attempt = screenfull.request(document.documentElement);
+                                if (attempt && typeof attempt.then === 'function') {
+                                    attempt.then(function(){ done = true; cleanup(); }).catch(function(){ arm(); });
+                                } else {
+                                    // No promise support; arm interaction just in case
+                                    arm();
+                                }
+                            } catch(e) {
+                                arm();
+                            }
+                            // If request didn’t immediately succeed, keep the gesture arm active
+                        } else {
+                            // No Fullscreen API: fallback immediately
+                            pseudo();
+                        }
+                    } catch(_) {}
+                })();
                 // Close tab / navigate back (streaming path)
                 (function(){
                     var $close = $("#closeTab");
@@ -1623,6 +1696,75 @@ async function init(filename) {
                     : $button.addClass("icon-resize-full").removeClass("icon-resize-small");
             });
         }
+    })();
+
+    // Auto fullscreen if enabled: try immediately, else on first reader interaction; fallback to pseudo-fullscreen
+    (function(){
+        try {
+            var enabled = (parseInt(settings.autoFullscreen, 10) === 1) || (settings.autoFullscreen === true);
+            if (!enabled) return;
+            var $button = $("#fullscreen");
+            var canFullscreen = (typeof screenfull !== "undefined" && screenfull && screenfull.isEnabled);
+
+            function pseudo(){
+                $('body').addClass('pseudo-fullscreen');
+                $button.addClass('icon-resize-small').removeClass('icon-resize-full');
+                $("#mainContent").focus();
+            }
+            function cleanup(){
+                var els = [document.getElementById('mainContent'), document.getElementById('main'), window];
+                ['pointerdown','click','touchstart'].forEach(function(ev){
+                    els.forEach(function(el){ if (el) el.removeEventListener(ev, armOnce, true); });
+                });
+                document.removeEventListener('keydown', armOnce, true);
+            }
+            function armOnce(e){
+                var ig = ['setting','slider','fullscreen','closeTab'];
+                if (e && e.target) {
+                    for (var i = 0; i < ig.length; i++) {
+                        var el = document.getElementById(ig[i]);
+                        if (el && (el === e.target || (el.contains && el.contains(e.target)))) return; // ignore
+                    }
+                    var tb = document.getElementById('titlebar');
+                    if (tb && (tb === e.target || (tb.contains && tb.contains(e.target)))) return; // ignore header
+                }
+                cleanup(); requestNow();
+            }
+            function arm(){
+                var els = [document.getElementById('mainContent'), document.getElementById('main')];
+                ['pointerdown','click','touchstart'].forEach(function(ev){
+                    els.forEach(function(el){ if (el) el.addEventListener(ev, armOnce, true); });
+                });
+                document.addEventListener('keydown', armOnce, true);
+            }
+            function requestNow(){
+                if (canFullscreen) {
+                    try {
+                        var p = screenfull.request(document.documentElement);
+                        if (p && typeof p.then === 'function') {
+                            p.then(function(){ cleanup(); $("#mainContent").focus(); }).catch(function(){ /* ignore */ });
+                        }
+                    } catch(_) {}
+                } else {
+                    pseudo();
+                }
+            }
+            if (canFullscreen) {
+                var done = false;
+                try {
+                    var attempt = screenfull.request(document.documentElement);
+                    if (attempt && typeof attempt.then === 'function') {
+                        attempt.then(function(){ done = true; cleanup(); }).catch(function(){ arm(); });
+                    } else {
+                        arm();
+                    }
+                } catch(e) {
+                    arm();
+                }
+            } else {
+                pseudo();
+            }
+        } catch(_) {}
     })();
 
     // Close tab / navigate back (always works with fallbacks)

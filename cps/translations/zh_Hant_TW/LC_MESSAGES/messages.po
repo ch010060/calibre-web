@@ -120,6 +120,10 @@ msgid "Guest's Locale is determined automatically and can't be set"
 msgstr "訪客的本地化是自動偵測而無法設置的"
 
 #: cps/templates/readcbr.html
+msgid "Auto Fullscreen"
+msgstr "自動全螢幕"
+
+#: cps/templates/readcbr.html
 msgid "prefetch page"
 msgstr "預載頁數"
 
