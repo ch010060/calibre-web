@@ -196,6 +196,20 @@ def update_thumbnails():
     return ""
 
 
+@admi.route("/ajax/refreshContentThumbnails", methods=['POST'])
+@admin_required
+@login_required
+def refresh_content_thumbnails():
+    # Clear cached content thumbnails regardless of scheduled tasks
+    from .fs import FileSystem
+    from .constants import CACHE_TYPE_CONTENT_THUMBS
+    try:
+        FileSystem().delete_cache_dir(CACHE_TYPE_CONTENT_THUMBS)
+        return ""
+    except Exception:
+        return "", 500
+
+
 @admi.route("/admin/view")
 @login_required
 @admin_required
@@ -644,6 +658,8 @@ def load_dialogtexts(element_id):
     elif element_id == "admin_refresh_cover_cache":
         texts["main"] = _('Calibre-Web will search for updated Covers '
                           'and update Cover Thumbnails, this may take a while?')
+    elif element_id == "admin_refresh_content_cache":
+        texts["main"] = _('Calibre-Web will clear cached Page Thumbnails. They will regenerate on next view.')
     elif element_id == "btnfullsync":
         texts["main"] = _("Are you sure you want delete Calibre-Web's sync database "
                           "to force a full sync with your Kobo Reader?")
@@ -1345,6 +1361,8 @@ def update_mailsettings():
 @admin_required
 def edit_scheduledtasks():
     content = config.get_scheduled_task_settings()
+    # include additional non-scheduled toggles rendered on this page
+    content['config_content_thumbs_enabled'] = config.config_content_thumbs_enabled
     time_field = list()
     duration_field = list()
 
@@ -1380,6 +1398,8 @@ def update_scheduledtasks():
     _config_checkbox(to_save, "schedule_generate_book_covers")
     _config_checkbox(to_save, "schedule_generate_series_covers")
     _config_checkbox(to_save, "schedule_reconnect")
+    # Save additional non-scheduled toggle
+    _config_checkbox(to_save, "config_content_thumbs_enabled")
 
     if not error:
         try:

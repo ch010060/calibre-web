@@ -324,6 +324,144 @@ def get_matching_tags():
     return json_dumps
 
 
+# --------------- Comic content thumbnails (page previews) ---------------
+
+def _open_comic_archive(book, fmt):
+    # find matching stored format
+    data_name = None
+    for bf in book.data:
+        if bf.format.lower() == fmt:
+            data_name = bf.name
+            break
+    if not data_name:
+        # allow zip/rar/tar alias
+        alias = {"cbz": "zip", "cbr": "rar", "cbt": "tar"}.get(fmt)
+        if alias:
+            for bf in book.data:
+                if bf.format.lower() == alias:
+                    data_name = bf.name
+                    fmt = alias
+                    break
+    if not data_name:
+        return [], None
+    cbr_file = os.path.join(config.config_calibre_dir, book.path, data_name) + "." + fmt
+    if fmt in ("cbr", "rar"):
+        try:
+            import rarfile  # pylint: disable=import-outside-toplevel
+            rarfile.UNRAR_TOOL = config.config_rarfile_location
+            rf = rarfile.RarFile(cbr_file)
+            names = sort([n for n in rf.namelist() if not n.endswith('/')])
+            def extract(i):
+                return rf.read(names[i])
+            return names, extract
+        except Exception:
+            return [], None
+    elif fmt in ("cbz", "zip"):
+        zf = zipfile.ZipFile(cbr_file)
+        names = sort([n for n in zf.namelist() if not n.endswith('/')])
+        def extract(i):
+            return zf.read(names[i])
+        return names, extract
+    elif fmt in ("cbt", "tar"):
+        import tarfile  # pylint: disable=import-outside-toplevel
+        tf = tarfile.TarFile(cbr_file)
+        names = sort([n for n in tf.getnames() if not n.endswith('/')])
+        def extract(i):
+            f = tf.extractfile(names[i])
+            return f.read() if f else b''
+        return names, extract
+    return [], None
+
+
+def _first_reader_format(entry):
+    fmts = [f.format.lower() for f in entry.data]
+    for cand in ("cbz", "zip", "cbr", "rar", "cbt", "tar"):
+        if cand in fmts:
+            return cand
+    return None
+
+
+@web.route("/ajax/page_count/<int:book_id>")
+@login_required_if_no_ano
+def page_count(book_id):
+    if not config.config_content_thumbs_enabled:
+        abort(404)
+    book = calibre_db.get_filtered_book(book_id, allow_show_archived=True)
+    if not book:
+        abort(404)
+    fmt = _first_reader_format(book)
+    if not fmt:
+        return jsonify({"count": 0})
+    names, _ = _open_comic_archive(book, fmt)
+    names = [n for n in names if n.rpartition('.')[-1].lower() in ("png","gif","jpg","jpeg","webp","avif")]
+    return jsonify({"count": len(names)})
+
+
+@web.route("/ajax/page_thumb/<int:book_id>/<int:page>")
+@login_required_if_no_ano
+def page_thumb(book_id, page):
+    if not config.config_content_thumbs_enabled:
+        abort(404)
+    book = calibre_db.get_filtered_book(book_id, allow_show_archived=True)
+    if not book:
+        abort(404)
+    fmt = _first_reader_format(book)
+    if not fmt:
+        abort(404)
+    names, extract = _open_comic_archive(book, fmt)
+    names = [n for n in names if n.rpartition('.')[-1].lower() in ("png","gif","jpg","jpeg","webp","avif")]
+    if page < 1 or page > len(names):
+        abort(404)
+    try:
+        raw = extract(page-1)
+        filename = names[page-1]
+        ext = filename.rpartition('.')[-1].lower()
+        from .fs import FileSystem
+        from .constants import CACHE_TYPE_CONTENT_THUMBS
+        fs = FileSystem()
+        # Serve original for AVIF (often unsupported by Pillow)
+        if ext == 'avif':
+            key = f"content_b{book_id}_p{page}.avif"
+            path = fs.get_cache_file_path(key, CACHE_TYPE_CONTENT_THUMBS)
+            if not os.path.isfile(path):
+                with open(path, 'wb') as f:
+                    f.write(raw)
+            return send_from_directory(fs.get_cache_file_dir(key, CACHE_TYPE_CONTENT_THUMBS), key,
+                                       mimetype='image/avif')
+        # Try to resize with Pillow; fallback to original bytes if decode fails
+        try:
+            im = Image.open(BytesIO(raw))
+            im = im.convert('RGB')
+            try:
+                w = int(request.args.get('w', 160))
+            except Exception:
+                w = 160
+            w = max(40, min(512, w))
+            ratio = w / float(im.width or 1)
+            h = max(1, int((im.height or 1) * ratio))
+            im = im.resize((w, h), Image.LANCZOS)
+            key = f"content_b{book_id}_p{page}_w{w}.jpg"
+            path = fs.get_cache_file_path(key, CACHE_TYPE_CONTENT_THUMBS)
+            if not os.path.isfile(path):
+                im.save(path, format='JPEG', quality=80, optimize=True)
+            return send_from_directory(fs.get_cache_file_dir(key, CACHE_TYPE_CONTENT_THUMBS), key,
+                                       mimetype='image/jpeg')
+        except Exception:
+            mime = 'image/jpeg'
+            if ext == 'png': mime = 'image/png'
+            elif ext == 'webp': mime = 'image/webp'
+            elif ext == 'gif': mime = 'image/gif'
+            key = f"content_b{book_id}_p{page}.{ext}"
+            path = fs.get_cache_file_path(key, CACHE_TYPE_CONTENT_THUMBS)
+            if not os.path.isfile(path):
+                with open(path, 'wb') as f:
+                    f.write(raw)
+            return send_from_directory(fs.get_cache_file_dir(key, CACHE_TYPE_CONTENT_THUMBS), key,
+                                       mimetype=mime)
+    except Exception:
+        abort(404)
+
+
 def generate_char_list(entries): # data_colum, db_link):
     char_list = list()
     for entry in entries:
@@ -1682,7 +1820,8 @@ def show_book(book_id):
                                      is_xhr=request.headers.get('X-Requested-With') == 'XMLHttpRequest',
                                      title=entry.title,
                                      books_shelfs=book_in_shelves,
-                                     page="book")
+                                     page="book",
+                                     config=config)
     else:
         log.debug(u"Oops! Selected book title is unavailable. File does not exist or is not accessible")
         flash(_(u"Oops! Selected book title is unavailable. File does not exist or is not accessible"),

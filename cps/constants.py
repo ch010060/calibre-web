@@ -173,6 +173,8 @@ NIGHTLY_VERSION[1] = '$Format:%cI$'
 
 # CACHE
 CACHE_TYPE_THUMBNAILS    = 'thumbnails'
+# Additional cache namespace for content page thumbnails
+CACHE_TYPE_CONTENT_THUMBS = 'content_thumbs'
 
 # Thumbnail Types
 THUMBNAIL_TYPE_COVER     = 1

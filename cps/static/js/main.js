@@ -485,6 +485,17 @@ $(function() {
         });
     });
 
+    $("#admin_refresh_content_cache").click(function() {
+        confirmDialog("admin_refresh_content_cache", "GeneralChangeModal", 0, function () {
+            $.ajax({
+                method:"post",
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                url: getPath() + "/ajax/refreshContentThumbnails",
+            });
+        });
+    });
+
     $("#restart_database").click(function() {
         $("#DialogHeader").addClass("hidden");
         $("#DialogFinished").addClass("hidden");

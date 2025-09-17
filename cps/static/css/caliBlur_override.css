@@ -41,6 +41,17 @@ body {
   flex: 0 0 auto;
 }
 
+/* --- Standardize comic Page Thumbnails block (isolate from theme) --- */
+.page-thumbnails { position: relative; }
+.page-thumbnails { margin-top: 16px !important; padding-top: 8px !important; border-top: 1px solid rgba(255,255,255,0.2) !important; }
+.page-thumbnails #thumbs-grid { display: grid !important; grid-template-columns: repeat(3, 1fr); gap: 12px !important; }
+@media (min-width: 768px) { .page-thumbnails #thumbs-grid { grid-template-columns: repeat(4, 1fr); } }
+@media (min-width: 992px) { .page-thumbnails #thumbs-grid { grid-template-columns: repeat(6, 1fr); } }
+.page-thumbnails #thumbs-grid > * { position: static !important; float: none !important; width: auto !important; }
+.page-thumbnails #thumbs-grid a { display: block !important; width: 100% !important; }
+.page-thumbnails #thumbs-grid .thumb-card { position: relative !important; width: 100% !important; padding-top: 143.75% !important; background: #fff !important; border: 1px solid rgba(255,255,255,0.2) !important; border-radius: 4px !important; overflow: hidden !important; box-sizing: border-box !important; }
+.page-thumbnails #thumbs-grid .thumb-card img { position: absolute !important; inset: 0 !important; margin: auto !important; max-width: 100% !important; max-height: 100% !important; object-fit: contain !important; background: #fff !important; display: block !important; }
+
 .book-meta .btn-toolbar [aria-label^="Download, send"] #archived_form {
   float: none !important;
   display: inline-flex !important;

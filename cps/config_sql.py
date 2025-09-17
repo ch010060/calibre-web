@@ -155,6 +155,9 @@ class _Settings(_Base):
     config_meilisearch_api_key = Column(String, default="")
     config_meilisearch_index = Column(String, default="books")
 
+    # Content thumbnails (comic page previews)
+    config_content_thumbs_enabled = Column(Boolean, default=False)
+
     def __repr__(self):
         return self.__class__.__name__
 

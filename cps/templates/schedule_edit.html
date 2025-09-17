@@ -28,6 +28,10 @@
       <input type="checkbox" id="schedule_generate_book_covers" name="schedule_generate_book_covers" {% if config.schedule_generate_book_covers %}checked{% endif %}>
       <label for="schedule_generate_book_covers">{{_('Generate Book Cover Thumbnails')}}</label>
     </div>
+    <div class="form-group">
+      <input type="checkbox" id="config_content_thumbs_enabled" name="config_content_thumbs_enabled" {% if config.config_content_thumbs_enabled %}checked{% endif %}>
+      <label for="config_content_thumbs_enabled">{{_('Generate Book Content Thumbnails')}}</label>
+    </div>
     <!--div class="form-group">
       <input type="checkbox" id="schedule_generate_series_covers" name="schedule_generate_series_covers" {% if config.schedule_generate_series_covers %}checked{% endif %}>
       <label for="schedule_generate_series_covers">{{_('Generate Series Cover Thumbnails')}}</label>

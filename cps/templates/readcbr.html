@@ -279,6 +279,12 @@
         currentImage = 0;
       }
     }
+    // Override via URL ?p=NN (1-based)
+    try {
+      var sp = new URLSearchParams(window.location.search);
+      var qp = parseInt(sp.get('p'));
+      if (!isNaN(qp) && qp > 0) { currentImage = qp - 1; }
+    } catch(e) {}
     
     document.onreadystatechange = function () {
       if (document.readyState == "complete") {

@@ -231,6 +231,43 @@ body {
   margin: 1px 0 -1px 6px;
 }
 
+/* Page thumbnails grid on book detail */
+.page-thumbnails { margin-top: 16px; padding-top: 8px; border-top: 1px solid #ddd; }
+.page-thumbnails #thumbs-grid.thumbs-row {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+@media (min-width: 768px) { .page-thumbnails #thumbs-grid.thumbs-row { grid-template-columns: repeat(4, 1fr); } }
+@media (min-width: 992px) { .page-thumbnails #thumbs-grid.thumbs-row { grid-template-columns: repeat(6, 1fr); } }
+.page-thumbnails #thumbs-grid .thumb-col {
+  position: static !important;
+  float: none !important;
+  width: auto !important;
+}
+.page-thumbnails #thumbs-grid a { display: block; width: 100%; }
+.page-thumbnails #thumbs-grid .thumb-card {
+  position: relative;
+  width: 100%;
+  /* Fixed 160x230 placeholder that scales with column width */
+  padding-top: 143.75%; /* 230/160 * 100% */
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+.page-thumbnails #thumbs-grid .thumb-card img {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  margin: auto;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain; /* keep aspect ratio; white padding shows */
+  background: #fff;
+  display: block;
+}
+
 #panels a.active,
 #panels a.active:hover {
   color: #aaa;

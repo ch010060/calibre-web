@@ -178,6 +178,10 @@
             <div class="col-xs-6 col-sm-3">{{_('Generate book cover thumbnails')}}</div>
             <div class="col-xs-6 col-sm-3">{{ display_bool_setting(config.schedule_generate_book_covers) }}</div>
           </div>
+          <div class="row">
+            <div class="col-xs-6 col-sm-3">{{_('Generate book content thumbnails')}}</div>
+            <div class="col-xs-6 col-sm-3">{{ display_bool_setting(config.config_content_thumbs_enabled) }}</div>
+          </div>
           <!--div class="row">
             <div class="col-xs-6 col-sm-3">{{_('Generate series cover thumbnails')}}</div>
             <div class="col-xs-6 col-sm-3">{{ display_bool_setting(config.schedule_generate_series_covers) }}</div>
@@ -191,6 +195,9 @@
       <a class="btn btn-default scheduledtasks" id="admin_edit_scheduled_tasks" href="{{url_for('admin.edit_scheduledtasks')}}">{{_('Edit Scheduled Tasks Settings')}}</a>
       {% if config.schedule_generate_book_covers %}
         <a class="btn btn-default" id="admin_refresh_cover_cache">{{_('Refresh Thumbnail Cover Cache')}}</a>
+      {%  endif %}
+      {% if config.config_content_thumbs_enabled %}
+        <a class="btn btn-default" id="admin_refresh_content_cache">{{_('Refresh Thumbnail Content Cache')}}</a>
       {%  endif %}
     </div>
   </div>

@@ -239,6 +239,83 @@
       {% endif %}
 
 
+      {% if config.config_content_thumbs_enabled and entry.reader_list and g.user.role_viewer() %}
+      <div class="page-thumbnails">
+        <div id="thumbs-grid" class="thumbs-row" data-book-id="{{ entry.id }}" data-read-url-base="{% if entry.reader_list|length > 0 %}{{ url_for('web.read_book', book_id=entry.id, book_format=entry.reader_list[0]) }}{% else %}#{% endif %}"></div>
+        <div class="text-center" id="thumbs-nav" style="margin:10px 0;">
+          <button id="thumbs-prev" class="btn btn-default btn-sm" disabled>&laquo; {{_('Previous')}}</button>
+          <span id="thumbs-range"></span>
+          <button id="thumbs-next" class="btn btn-default btn-sm" disabled>{{_('Next')}} &raquo;</button>
+        </div>
+      </div>
+      <script>
+      (function(){
+        function log(){ try { console.log.apply(console, arguments); } catch(_){} }
+        try {
+          var grid = document.getElementById('thumbs-grid');
+          if (!grid) { log('[thumbs] grid missing'); return; }
+          var bookId = grid.getAttribute('data-book-id');
+          var baseUrl = grid.getAttribute('data-read-url-base') || '#';
+          var perPage = 24;
+          var start = 1; // 1-based
+          var total = 0;
+          var rangeEl = document.getElementById('thumbs-range');
+          var prevBtn = document.getElementById('thumbs-prev');
+          var nextBtn = document.getElementById('thumbs-next');
+          log('[thumbs] init bookId=', bookId);
+
+          function render(){
+            grid.innerHTML = '';
+            var end = Math.min(total, start + perPage - 1);
+            if (total === 0){ rangeEl.textContent = '0 / 0'; prevBtn.disabled = true; nextBtn.disabled = true; return; }
+            rangeEl.textContent = start + '–' + end + ' / ' + total;
+            prevBtn.disabled = (start <= 1);
+            nextBtn.disabled = (end >= total);
+            var tmpl = '{{ url_for('web.page_thumb', book_id=0, page=1) }}';
+          for (var p = start; p <= end; p++){
+            var col = document.createElement('div');
+            col.className = 'thumb-col';
+            var a = document.createElement('a');
+            a.href = baseUrl + '?p=' + p;
+            a.title = 'Page ' + p;
+            var img = document.createElement('img');
+            img.loading = 'lazy';
+            img.alt = 'Page ' + p;
+            img.decoding = 'async';
+            img.src = tmpl.replace('/0/1', '/' + bookId + '/' + p) + '?w=160';
+            img.onerror = function(ev){ log('[thumbs] img error', ev && ev.target && ev.target.src); };
+            var card = document.createElement('div');
+            card.className = 'thumb-card';
+            card.appendChild(img);
+            a.appendChild(card);
+            col.appendChild(a);
+            grid.appendChild(col);
+          }
+          }
+          function fetchCount(){
+            var countUrl = '{{ url_for('web.page_count', book_id=0) }}'.replace(/\/0$/, '/' + bookId);
+            log('[thumbs] fetch count', countUrl);
+            if (window.fetch) {
+              fetch(countUrl, {credentials: 'same-origin'})
+                .then(function(r){ log('[thumbs] count status', r.status); return r.json(); })
+                .then(function(j){ total = (j && j.count) || 0; log('[thumbs] count json', total); start = 1; render(); })
+                .catch(function(err){ log('[thumbs] count error', err); total = 0; render(); });
+            } else if (window.jQuery && jQuery.getJSON) {
+              jQuery.getJSON(countUrl, function(j){ total = (j && j.count) || 0; start = 1; render(); })
+                .fail(function(){ total = 0; render(); });
+            } else {
+              log('[thumbs] no fetch/jQuery available');
+              total = 0; render();
+            }
+          }
+          prevBtn.addEventListener('click', function(){ if (start > 1){ start = Math.max(1, start - perPage); render(); }});
+          nextBtn.addEventListener('click', function(){ if (start + perPage <= total){ start = start + perPage; render(); }});
+          fetchCount();
+        } catch(e) { try { console.error('[thumbs] fatal', e); } catch(_){} }
+      })();
+      </script>
+      {% endif %}
+
       {% if entry.comments|length > 0 and entry.comments[0].text|length > 0%}
         <div class="comments">
             <h3 id="decription">{{_('Description:')}}</h3>
