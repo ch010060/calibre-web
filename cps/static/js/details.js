@@ -110,3 +110,71 @@ $("#archived_cb").on("change", function() {
             });
     });
 })();
+
+// Hover Zoom for detail cover: show original cover near cursor on hover
+(function(){
+    var cover = document.getElementById('detailcover');
+    if (!cover) return;
+    // Skip on touch-centric devices to avoid accidental popups
+    if ('ontouchstart' in window || navigator.maxTouchPoints > 0) return;
+
+    var win = null, img = null;
+    var src = cover.getAttribute('src');
+    var offset = 16; // px from cursor
+
+    function ensureWindow(){
+        if (win) return win;
+        win = document.createElement('div');
+        win.className = 'hover-zoom-window';
+        img = document.createElement('img');
+        img.alt = '';
+        img.decoding = 'async';
+        img.src = src;
+        win.appendChild(img);
+        document.body.appendChild(win);
+        return win;
+    }
+
+    function clamp(val, min, max){ return Math.max(min, Math.min(max, val)); }
+
+    function position(px, py){
+        if (!win || !img) return;
+        var vw = window.innerWidth || document.documentElement.clientWidth || 1024;
+        var vh = window.innerHeight || document.documentElement.clientHeight || 768;
+
+        // Measure intended size (respect CSS max constraints via natural size)
+        var naturalW = img.naturalWidth || 600;
+        var naturalH = img.naturalHeight || 900;
+        var maxW = Math.floor(vw * 0.6);
+        var maxH = Math.floor(vh * 0.9);
+        var scale = Math.min(1, maxW / naturalW, maxH / naturalH);
+        var w = Math.floor(naturalW * scale);
+        var h = Math.floor(naturalH * scale);
+
+        // Default to right-bottom of cursor
+        var left = px + offset;
+        var top = py + offset;
+        // If overflowing right, flip to left side
+        if (left + w + offset > vw) left = px - offset - w;
+        // Clamp to viewport
+        left = clamp(left, 8, vw - w - 8);
+        top = clamp(top, 8, vh - h - 8);
+
+        win.style.left = left + 'px';
+        win.style.top = top + 'px';
+        win.style.width = w + 'px';
+        win.style.height = h + 'px';
+        img.style.width = '100%';
+        img.style.height = '100%';
+    }
+
+    function show(e){ ensureWindow(); win.classList.add('visible'); position(e.clientX, e.clientY); }
+    function move(e){ if (!win) return; position(e.clientX, e.clientY); }
+    function hide(){ if (win) win.classList.remove('visible'); }
+
+    cover.addEventListener('mouseenter', show);
+    cover.addEventListener('mousemove', move);
+    cover.addEventListener('mouseleave', hide);
+    window.addEventListener('scroll', hide, { passive: true });
+    window.addEventListener('resize', hide);
+})();

@@ -23,6 +23,55 @@ body.serieslist.grid-view div.container-fluid > div > div.col-sm-10::before {
   line-height: 15px;
 }
 
+/* Make detail-page cover fill its column and add slight padding */
+.single .col-sm-3.col-lg-3.col-xs-5 > .cover {
+  width: 100% !important;
+  max-width: none !important;
+  padding: 8px !important;
+  box-sizing: border-box !important;
+  position: relative !important; /* needed for hover preview positioning */
+  cursor: zoom-in !important;
+}
+
+.single .col-sm-3.col-lg-3.col-xs-5 > .cover > img#detailcover {
+  width: 100% !important;
+  max-width: none !important;
+  height: auto !important;
+  max-height: none !important; /* prevent clamping that can break aspect ratio */
+  display: block !important;
+}
+
+/* Hover: show original-sized cover next to the column */
+/* Hover Zoom floating window (created dynamically by JS) */
+.hover-zoom-window {
+  position: fixed !important;
+  z-index: 9999 !important;
+  pointer-events: none !important;
+  display: none !important;
+  border: 1px solid rgba(255,255,255,0.6) !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5) !important;
+  background: #111 !important;
+}
+.hover-zoom-window.visible { display: block !important; }
+.hover-zoom-window img {
+  display: block !important;
+  width: auto !important;
+  height: auto !important;
+  max-width: 60vw !important;
+  max-height: 90vh !important;
+}
+
+/* Allow the cover column to grow with content (remove fixed height) */
+.single .col-sm-3.col-lg-3.col-xs-5 {
+  height: auto !important;
+  pointer-events: auto !important; /* re-enable interactions overridden by theme */
+}
+
+.single .col-sm-3.col-lg-3.col-xs-5 > .cover,
+.single .col-sm-3.col-lg-3.col-xs-5 > .cover > #detailcover {
+  pointer-events: auto !important;
+}
+
 /* iOS PWA safe-area adjustments (applies only where env() is supported) */
 .navbar.navbar-default {
   padding-top: env(safe-area-inset-top);
