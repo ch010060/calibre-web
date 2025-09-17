@@ -1493,6 +1493,22 @@ async function init(filename) {
                         });
                     }
                 })();
+                // Close tab / navigate back (streaming path)
+                (function(){
+                    var $close = $("#closeTab");
+                    $close.off('click.__close').on('click.__close', function(e){
+                        e.preventDefault();
+                        try { if (typeof setBookmark === 'function') setBookmark(); } catch(_) {}
+                        try { window.close(); } catch(_) {}
+                        try {
+                            if (window.history && window.history.length > 1) { window.history.back(); return; }
+                        } catch(_) {}
+                        try {
+                            if (document.referrer) { window.location.href = document.referrer; return; }
+                        } catch(_) {}
+                        try { window.location.href = '/'; } catch(_) {}
+                    });
+                })();
                 return; // streamed path handled, don't use XHR
             }
         }
@@ -1607,6 +1623,23 @@ async function init(filename) {
                     : $button.addClass("icon-resize-full").removeClass("icon-resize-small");
             });
         }
+    })();
+
+    // Close tab / navigate back (always works with fallbacks)
+    (function(){
+        var $close = $("#closeTab");
+        $close.off('click.__close').on('click.__close', function(e){
+            e.preventDefault();
+            try { if (typeof setBookmark === 'function') setBookmark(); } catch(_) {}
+            try { window.close(); } catch(_) {}
+            try {
+                if (window.history && window.history.length > 1) { window.history.back(); return; }
+            } catch(_) {}
+            try {
+                if (document.referrer) { window.location.href = document.referrer; return; }
+            } catch(_) {}
+            try { window.location.href = '/'; } catch(_) {}
+        });
     })();
 
     // Focus the scrollable area so that keyboard scrolling work as expected

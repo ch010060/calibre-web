@@ -396,3 +396,36 @@ body.pseudo-fullscreen #fullscreen {
   border-radius: 8px;
   padding: 6px;
 }
+
+/* Bottom-right close button */
+#closeTab {
+  position: fixed;
+  bottom: calc(env(safe-area-inset-bottom) + 14px);
+  right: calc(env(safe-area-inset-right) + 14px);
+  width: 44px;
+  height: 44px;
+  line-height: 44px;
+  text-align: center;
+  z-index: 10000;
+  color: #fff;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+  /* Improve legibility on bright pages without a box */
+  -webkit-text-stroke: 1px rgba(0,0,0,0.55);
+  text-shadow:
+    0 0 2px rgba(0,0,0,0.85),
+    0 0 4px rgba(0,0,0,0.65),
+    0 1px 1px rgba(0,0,0,0.8),
+    0 -1px 1px rgba(0,0,0,0.8),
+    1px 0 1px rgba(0,0,0,0.8),
+    -1px 0 1px rgba(0,0,0,0.8);
+  -webkit-tap-highlight-color: transparent;
+}
+#closeTab:hover { background: transparent; }
+#closeTab:focus { outline: none; box-shadow: none; }
+
+/* Ensure visibility in fullscreen modes */
+html:fullscreen #closeTab,
+html:-webkit-full-screen #closeTab,
+body.pseudo-fullscreen #closeTab { display: inline-block; }
