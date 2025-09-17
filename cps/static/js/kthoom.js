@@ -1471,6 +1471,28 @@ async function init(filename) {
                     var page = $(this).data("page");
                     if (typeof page === 'number') { currentImage = page - 1; updatePage(); }
                 });
+                // Fullscreen mode (streaming path, fallback-aware)
+                (function(){
+                    var $button = $("#fullscreen");
+                    var canFullscreen = (typeof screenfull !== "undefined" && screenfull && screenfull.isEnabled);
+                    $button.off('click.__fs').on('click.__fs', function() {
+                        if (canFullscreen) {
+                            screenfull.toggle();
+                        } else {
+                            $('body').toggleClass('pseudo-fullscreen');
+                            var active = $('body').hasClass('pseudo-fullscreen');
+                            $button.toggleClass('icon-resize-small', active).toggleClass('icon-resize-full', !active);
+                        }
+                        $("#mainContent").focus();
+                    });
+                    if (canFullscreen && screenfull.raw) {
+                        document.addEventListener(screenfull.raw.fullscreenchange, function() {
+                            screenfull.isFullscreen
+                                ? $button.addClass("icon-resize-small").removeClass("icon-resize-full")
+                                : $button.addClass("icon-resize-full").removeClass("icon-resize-small");
+                        });
+                    }
+                })();
                 return; // streamed path handled, don't use XHR
             }
         }
@@ -1562,23 +1584,30 @@ async function init(filename) {
         if (typeof page === 'number') { currentImage = page - 1; updatePage(); }
     });
 
-    // Fullscreen mode
-    if (typeof screenfull !== "undefined") {
-        $("#fullscreen").click(function() {
-            screenfull.toggle($("#container")[0]);
+    // Fullscreen mode (fallback-aware)
+    (function(){
+        var $button = $("#fullscreen");
+        var canFullscreen = (typeof screenfull !== "undefined" && screenfull && screenfull.isEnabled);
+        $button.off('click.__fs').on('click.__fs', function() {
+            if (canFullscreen) {
+                screenfull.toggle();
+            } else {
+                // Pseudo fullscreen fallback: fill viewport & hide chrome
+                $('body').toggleClass('pseudo-fullscreen');
+                var active = $('body').hasClass('pseudo-fullscreen');
+                $button.toggleClass('icon-resize-small', active).toggleClass('icon-resize-full', !active);
+            }
 			// Focus on main container so you can use up/down keys immediately after fullscreen
 			$("#mainContent").focus();
         });
-
-        if (screenfull.raw) {
-            var $button = $("#fullscreen");
+        if (canFullscreen && screenfull.raw) {
             document.addEventListener(screenfull.raw.fullscreenchange, function() {
                 screenfull.isFullscreen
                     ? $button.addClass("icon-resize-small").removeClass("icon-resize-full")
                     : $button.addClass("icon-resize-full").removeClass("icon-resize-small");
             });
         }
-    }
+    })();
 
     // Focus the scrollable area so that keyboard scrolling work as expected
     $("#mainContent").focus();
