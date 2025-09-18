@@ -155,6 +155,25 @@ class _Settings(_Base):
     config_meilisearch_api_key = Column(String, default="")
     config_meilisearch_index = Column(String, default="books")
 
+    # Local AI search (embeddings) — self‑host only
+    ai_search_enabled = Column(Boolean, default=False)
+    ai_embeddings_url = Column(String, default="http://localhost:11434/api/embeddings")
+    ai_embeddings_model = Column(String, default="bge-m3")
+    ai_vector_dim = Column(Integer, default=1024)
+    ai_vector_topk = Column(Integer, default=100)
+    ai_timeout_ms = Column(Integer, default=700)
+
+    # Optional local rerank (TEI or similar)
+    ai_rerank_enabled = Column(Boolean, default=False)
+    ai_rerank_url = Column(String, default="")
+    ai_rerank_model = Column(String, default="")
+    ai_rerank_topn = Column(Integer, default=50)
+    ai_rerank_timeout_ms = Column(Integer, default=1000)
+
+    # Meilisearch-native hybrid settings
+    ai_embedder_name = Column(String, default="ollama")
+    ai_semantic_ratio = Column(Integer, default=50)  # percent, 0..100
+
     # Content thumbnails (comic page previews)
     config_content_thumbs_enabled = Column(Boolean, default=False)
 

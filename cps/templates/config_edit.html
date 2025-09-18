@@ -370,16 +370,69 @@
           <label for="config_meilisearch_enabled">{{_('Enable Meilisearch for simple search')}}</label>
         </div>
         <div class="form-group">
-          <label for="config_meilisearch_host">{{_('Meilisearch Host (e.g. http://127.0.0.1:7700)')}}</label>
-          <input type="text" class="form-control" id="config_meilisearch_host" name="config_meilisearch_host" value="{% if config.config_meilisearch_host != None %}{{ config.config_meilisearch_host }}{% endif %}" autocomplete="off">
+          <label for="config_meilisearch_host">{{_('Meilisearch Host')}}</label>
+          <input type="text" class="form-control" id="config_meilisearch_host" name="config_meilisearch_host" value="{% if config.config_meilisearch_host != None %}{{ config.config_meilisearch_host }}{% endif %}" autocomplete="off" placeholder="http://127.0.0.1:7700">
         </div>
         <div class="form-group">
           <label for="config_meilisearch_index">{{_('Meilisearch Index Name')}}</label>
           <input type="text" class="form-control" id="config_meilisearch_index" name="config_meilisearch_index" value="{% if config.config_meilisearch_index != None %}{{ config.config_meilisearch_index }}{% endif %}" autocomplete="off">
         </div>
         <div class="form-group">
-          <label for="config_meilisearch_api_key">{{_('Meilisearch API Key (optional)')}}</label>
+          <label for="config_meilisearch_api_key">{{_('Meilisearch API Key')}}</label>
           <input type="text" class="form-control" id="config_meilisearch_api_key" name="config_meilisearch_api_key" value="" autocomplete="off" placeholder="{{_('Leave blank to keep current')}}">
+        </div>
+        <hr>
+        <div class="form-group">
+          <input type="checkbox" id="ai_search_enabled" name="ai_search_enabled" {% if config.ai_search_enabled %}checked{% endif %}>
+          <label for="ai_search_enabled">{{_('Enable Meilisearch for AI search (optional)')}}</label>
+        </div>
+        <div class="form-group">
+          <label for="ai_embeddings_url">{{_('Embeddings Endpoint URL')}}</label>
+          <input type="text" class="form-control" id="ai_embeddings_url" name="ai_embeddings_url" value="{% if config.ai_embeddings_url != None %}{{ config.ai_embeddings_url }}{% endif %}" autocomplete="off" placeholder="http://localhost:11434/api/embeddings">
+        </div>
+        <div class="form-group">
+          <label for="ai_embeddings_model">{{_('Embeddings Model')}}</label>
+          <input type="text" class="form-control" id="ai_embeddings_model" name="ai_embeddings_model" value="{% if config.ai_embeddings_model != None %}{{ config.ai_embeddings_model }}{% endif %}" autocomplete="off" placeholder="bge-m3 or bge-small">
+        </div>
+        <div class="form-group">
+          <label for="ai_vector_dim">{{_('Vector Dimension')}}</label>
+          <input type="number" min="1" class="form-control" id="ai_vector_dim" name="ai_vector_dim" value="{% if config.ai_vector_dim != None %}{{ config.ai_vector_dim }}{% endif %}" autocomplete="off" placeholder="1024 for bge-m3, 384 for bge-small">
+        </div>
+        <div class="form-group">
+          <label for="ai_vector_topk">{{_('Vector TopK (retrieve)')}}</label>
+          <input type="number" min="1" class="form-control" id="ai_vector_topk" name="ai_vector_topk" value="{% if config.ai_vector_topk != None %}{{ config.ai_vector_topk }}{% endif %}" autocomplete="off" placeholder="100">
+        </div>
+        <div class="form-group">
+          <label for="ai_timeout_ms">{{_('Embeddings Timeout (ms)')}}</label>
+          <input type="number" min="100" class="form-control" id="ai_timeout_ms" name="ai_timeout_ms" value="{% if config.ai_timeout_ms != None %}{{ config.ai_timeout_ms }}{% endif %}" autocomplete="off" placeholder="3000">
+        </div>
+        <div class="form-group">
+          <label for="ai_embedder_name">{{_('Embedder Name (Meilisearch)')}}</label>
+          <input type="text" class="form-control" id="ai_embedder_name" name="ai_embedder_name" value="{% if config.ai_embedder_name != None %}{{ config.ai_embedder_name }}{% endif %}" autocomplete="off" placeholder="ollama">
+        </div>
+        <div class="form-group">
+          <label for="ai_semantic_ratio">{{_('Semantic Ratio')}} (%)</label>
+          <input type="number" min="0" max="100" class="form-control" id="ai_semantic_ratio" name="ai_semantic_ratio" value="{% if config.ai_semantic_ratio != None %}{{ config.ai_semantic_ratio }}{% endif %}" autocomplete="off" placeholder="50">
+        </div>
+        <div class="form-group">
+          <input type="checkbox" id="ai_rerank_enabled" name="ai_rerank_enabled" {% if config.ai_rerank_enabled %}checked{% endif %}>
+          <label for="ai_rerank_enabled">{{_('Enable Local Rerank (optional)')}}</label>
+        </div>
+        <div class="form-group">
+          <label for="ai_rerank_url">{{_('Rerank Endpoint URL')}}</label>
+          <input type="text" class="form-control" id="ai_rerank_url" name="ai_rerank_url" value="{% if config.ai_rerank_url != None %}{{ config.ai_rerank_url }}{% endif %}" autocomplete="off" placeholder="http://localhost:8081/rerank">
+        </div>
+        <div class="form-group">
+          <label for="ai_rerank_model">{{_('Rerank Model')}}</label>
+          <input type="text" class="form-control" id="ai_rerank_model" name="ai_rerank_model" value="{% if config.ai_rerank_model != None %}{{ config.ai_rerank_model }}{% endif %}" autocomplete="off" placeholder="BAAI/bge-reranker-v2-m3">
+        </div>
+        <div class="form-group">
+          <label for="ai_rerank_topn">{{_('Rerank TopN')}}</label>
+          <input type="number" min="1" class="form-control" id="ai_rerank_topn" name="ai_rerank_topn" value="{% if config.ai_rerank_topn != None %}{{ config.ai_rerank_topn }}{% endif %}" autocomplete="off" placeholder="50">
+        </div>
+        <div class="form-group">
+          <label for="ai_rerank_timeout_ms">{{_('Rerank Timeout (ms)')}}</label>
+          <input type="number" min="100" class="form-control" id="ai_rerank_timeout_ms" name="ai_rerank_timeout_ms" value="{% if config.ai_rerank_timeout_ms != None %}{{ config.ai_rerank_timeout_ms }}{% endif %}" autocomplete="off" placeholder="1000">
         </div>
       </div>
     </div>

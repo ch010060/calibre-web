@@ -116,6 +116,11 @@ def before_request():
     g.config_authors_max = config.config_authors_max
     g.shelves_access = ub.session.query(ub.Shelf).filter(
         or_(ub.Shelf.is_public == 1, ub.Shelf.user_id == current_user.id)).order_by(ub.Shelf.name).all()
+    # expose Meilisearch enabled flag to templates
+    try:
+        g.meilisearch_enabled = bool(config.config_meilisearch_enabled and config.config_meilisearch_host)
+    except Exception:
+        g.meilisearch_enabled = False
     if '/static/' not in request.path and not config.db_configured and \
         request.endpoint not in ('admin.ajax_db_config',
                                  'admin.simulatedbchange',
@@ -433,6 +438,79 @@ def reindex_meilisearch():
     WorkerThread.add(current_user.name, TaskReindexMeilisearch())
     return Response(json.dumps({'type': 'success', 'message': _('Meilisearch reindex queued. See Tasks for progress.')}),
                     mimetype='application/json')
+
+
+@admi.route("/ajax/test_meili_ai", methods=['POST'])
+@login_required
+@admin_required
+def test_meili_ai():
+    from . import search_meilisearch as meili
+    res = {
+        'host': config.config_meilisearch_host or '',
+        'index': config.config_meilisearch_index or 'books',
+        'embedder': getattr(config, 'ai_embedder_name', ''),
+        'ok': False,
+        'steps': []
+    }
+    try:
+        if not meili.is_enabled():
+            res['steps'].append({'step': 'enabled', 'ok': False, 'error': 'Meilisearch not enabled/configured'})
+            return Response(json.dumps(res), mimetype='application/json')
+        import requests
+        headers = {}
+        if config.config_meilisearch_api_key:
+            headers['Authorization'] = f"Bearer {config.config_meilisearch_api_key}"
+            headers['X-Meili-API-Key'] = config.config_meilisearch_api_key
+        host = (config.config_meilisearch_host or '').rstrip('/')
+        index = config.config_meilisearch_index or 'books'
+
+        # Ping index
+        r = requests.get(f"{host}/indexes/{index}", headers=headers, timeout=5)
+        res['steps'].append({'step': 'get-index', 'ok': r.status_code == 200, 'status': r.status_code})
+
+        # Get embedders
+        e = requests.get(f"{host}/indexes/{index}/settings/embedders", headers=headers, timeout=5)
+        try:
+            emb = e.json() if e.status_code == 200 else {}
+        except Exception:
+            emb = {}
+        res['steps'].append({'step': 'get-embedders', 'ok': bool(emb), 'status': e.status_code, 'embedders': emb})
+
+        # Stats
+        s = requests.get(f"{host}/indexes/{index}/stats", headers=headers, timeout=5)
+        try:
+            stats = s.json() if s.status_code == 200 else {}
+        except Exception:
+            stats = {}
+        res['steps'].append({'step': 'stats', 'ok': s.status_code == 200, 'status': s.status_code,
+                             'numberOfDocuments': stats.get('numberOfDocuments'),
+                             'numberOfEmbeddings': stats.get('numberOfEmbeddings'),
+                             'numberOfEmbeddedDocuments': stats.get('numberOfEmbeddedDocuments')})
+
+        # Hybrid test
+        payload = {
+            'q': 'AI 測試',
+            'hybrid': {
+                'semanticRatio': max(0.0, min(1.0, float(getattr(config, 'ai_semantic_ratio', 50))/100.0)),
+                'embedder': getattr(config, 'ai_embedder_name', 'ollama') or 'ollama'
+            },
+            'limit': 3,
+            'showRankingScore': True,
+        }
+        h = requests.post(f"{host}/indexes/{index}/search", headers={**headers, 'Content-Type': 'application/json'},
+                          json=payload, timeout=10)
+        ok = (h.status_code == 200)
+        out = {'step': 'hybrid-search', 'ok': ok, 'status': h.status_code}
+        if ok:
+            j = h.json()
+            out['hits'] = len(j.get('hits', []) or [])
+        else:
+            out['error'] = h.text[:500]
+        res['steps'].append(out)
+        res['ok'] = True
+    except Exception as ex:
+        res['steps'].append({'step': 'exception', 'ok': False, 'error': str(ex)})
+    return Response(json.dumps(res), mimetype='application/json')
 
 
 @admi.route("/ajax/getlocale")
@@ -1260,6 +1338,9 @@ def _configuration_ldap_helper(to_save):
     return reboot_required, None
 
 
+## removed duplicate ajax_config; handled earlier via _configuration_update_helper
+
+
 @admi.route("/ajax/simulatedbchange", methods=['POST'])
 @login_required
 @admin_required
@@ -1845,12 +1926,40 @@ def _configuration_update_helper():
         if to_save.get("config_meilisearch_api_key", "") != "":
             _config_string(to_save, "config_meilisearch_api_key")
         _config_string(to_save, "config_meilisearch_index")
+        # AI embeddings + rerank
+        _config_checkbox(to_save, "ai_search_enabled")
+        _config_string(to_save, "ai_embeddings_url")
+        _config_string(to_save, "ai_embeddings_model")
+        _config_int(to_save, "ai_vector_dim")
+        _config_int(to_save, "ai_vector_topk")
+        _config_int(to_save, "ai_timeout_ms")
+        _config_checkbox(to_save, "ai_rerank_enabled")
+        _config_string(to_save, "ai_rerank_url")
+        _config_string(to_save, "ai_rerank_model")
+        _config_int(to_save, "ai_rerank_topn")
+        _config_int(to_save, "ai_rerank_timeout_ms")
+        _config_string(to_save, "ai_embedder_name")
+        _config_int(to_save, "ai_semantic_ratio")
     except (OperationalError, InvalidRequestError) as e:
         ub.session.rollback()
         log.error_or_exception("Settings Database error: {}".format(e))
         _configuration_result(_(u"Database error: %(error)s.", error=e.orig))
 
+    # Save settings first
     config.save()
+
+    # If Meilisearch + AI embeddings are enabled, ensure embedder and/or vector store are configured on index
+    try:
+        from . import search_meilisearch as meili
+        if config.config_meilisearch_enabled and config.config_meilisearch_host and config.ai_search_enabled:
+            # Prefer native embedder; if present, Meilisearch will handle vectors automatically
+            if config.ai_embedder_name and config.ai_embeddings_url and config.ai_embeddings_model:
+                meili.ensure_embedder_on_index(config.ai_embedder_name, config.ai_embeddings_url, config.ai_embeddings_model)
+            else:
+                # fallback: ensure vector size only (manual vector mode)
+                meili.ensure_index_with_vectors(int(config.ai_vector_dim or 0))
+    except Exception as ex:
+        log.warning("Auto-setup of Meilisearch vector store skipped: %s", ex)
     if reboot_required:
         web_server.stop(True)
 

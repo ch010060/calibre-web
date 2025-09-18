@@ -178,6 +178,7 @@ tinymce.addI18n('zh_Hant_TW',{
 "Print...": "\u5217\u5370...",
 "Save": "\u5132\u5b58",
 "Find": "\u641c\u5c0b",
+"Search Integration": "\u641c\u5c0b\u6574\u5408",
 "Replace with": "\u66f4\u63db",
 "Replace": "\u66ff\u63db",
 "Replace all": "\u66ff\u63db\u5168\u90e8",

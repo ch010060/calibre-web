@@ -40,7 +40,10 @@ log = logger.create()
 @login_required_if_no_ano
 def simple_search():
     term = request.args.get("query")
+    ai = request.args.get("ai")
     if term:
+        if ai:
+            return redirect(url_for('web.books_list', data="search", sort_param='stored', query=term.strip(), ai=1))
         return redirect(url_for('web.books_list', data="search", sort_param='stored', query=term.strip()))
     else:
         return render_title_template('search.html',
@@ -379,39 +382,50 @@ def render_search_results(term, offset=None, order=None, limit=None):
     # Prefer Meilisearch if configured, fall back to SQL LIKE search
     if meili.is_enabled():
         try:
-            ms = meili.search(term, offset or 0, limit or config.config_books_per_page)
-            if ms and ms.get('hits'):
-                ids = meili.extract_ids(ms)
-                if ids:
-                    # Fetch matching books preserving relevance order (query pure Books ORM rows)
-                    q = calibre_db.session.query(db.Books) \
-                        .outerjoin(db.books_series_link, db.Books.id == db.books_series_link.c.book) \
-                        .outerjoin(db.Series) \
-                        .filter(calibre_db.common_filters(True)) \
-                        .filter(db.Books.id.in_(ids)) \
-                        .all()
-
-                    # Order results according to Meilisearch
-                    by_id = {b.id: b for b in q}
-                    ordered = [by_id[i] for i in ids if i in by_id]
-
+            use_ai = bool(request.args.get('ai')) or bool(request.args.get('ai') == '1')
+            ids = []
+            total = 0
+            if use_ai and getattr(config, 'ai_search_enabled', False):
+                ids, total = meili.ai_hybrid_search(term)
+            else:
+                ms = meili.search(term, offset or 0, limit or config.config_books_per_page)
+                if ms and ms.get('hits'):
+                    ids = meili.extract_ids(ms)
                     total = int(ms.get('estimatedTotalHits') or ms.get('nbHits') or len(ids))
-                    off = int(offset or 0)
-                    lim = int(limit or config.config_books_per_page)
-                    pagination = Pagination((off / lim + 1), lim, total)
+            if ids:
+                # Fetch matching books preserving relevance order (query pure Books ORM rows)
+                q = calibre_db.session.query(db.Books) \
+                    .outerjoin(db.books_series_link, db.Books.id == db.books_series_link.c.book) \
+                    .outerjoin(db.Series) \
+                    .filter(calibre_db.common_filters(True)) \
+                    .filter(db.Books.id.in_(ids)) \
+                    .all()
 
-                    ub.store_combo_ids(ordered)
-                    entries = calibre_db.order_authors(ordered, list_return=True, combined=True)
-                    return render_title_template('search.html',
-                                                 searchterm=term,
-                                                 pagination=pagination,
-                                                 query=term,
-                                                 adv_searchterm=term,
-                                                 entries=entries,
-                                                 result_count=total,
-                                                 title=_(u"Search"),
-                                                 page="search",
-                                                 order=order[1])
+                # Order results according to Meilisearch/AI list
+                by_id = {b.id: b for b in q}
+                ordered = [by_id[i] for i in ids if i in by_id]
+
+                off = int(offset or 0)
+                lim = int(limit or config.config_books_per_page)
+                pagination = Pagination((off / lim + 1), lim, total)
+
+                ub.store_combo_ids(ordered)
+                entries = calibre_db.order_authors(ordered, list_return=True, combined=True)
+                order_name = None
+                try:
+                    order_name = order[1]
+                except Exception:
+                    order_name = 'new'
+                return render_title_template('search.html',
+                                             searchterm=term,
+                                             pagination=pagination,
+                                             query=term,
+                                             adv_searchterm=term,
+                                             entries=entries,
+                                             result_count=total,
+                                             title=_(u"Search"),
+                                             page="search",
+                                             order=order_name)
         except Exception as ex:
             log.error_or_exception(ex)
 
@@ -423,6 +437,11 @@ def render_search_results(term, offset=None, order=None, limit=None):
                                                                       order,
                                                                       limit,
                                                                       *join)
+    order_name = None
+    try:
+        order_name = order[1]
+    except Exception:
+        order_name = 'new'
     return render_title_template('search.html',
                                  searchterm=term,
                                  pagination=pagination,
@@ -432,7 +451,7 @@ def render_search_results(term, offset=None, order=None, limit=None):
                                  result_count=result_count,
                                  title=_(u"Search"),
                                  page="search",
-                                 order=order[1])
+                                 order=order_name)
 
 
 @search.route("/ajax/suggest", methods=["GET"])

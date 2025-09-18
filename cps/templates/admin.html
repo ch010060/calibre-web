@@ -208,6 +208,7 @@
     <a class="btn btn-default" id="logfile" href="{{url_for('admin.view_logfile')}}">{{_('View Logs')}}</a>
     {% if config.config_meilisearch_enabled %}
     <div class="btn btn-default" id="admin_reindex_meilisearch" data-toggle="modal" data-target="#StatusDialog">{{_('Reindex Meilisearch')}}</div>
+    <div class="btn btn-default" id="admin_test_meili_ai" data-toggle="modal" data-target="#StatusDialog">{{_('Test Meilisearch AI')}}</div>
     {% endif %}
   </div>
   <div class="row form-group">
@@ -292,7 +293,7 @@
                 <img id="img-spinner2" src="{{ url_for('static', filename='css/libs/images/loading-icon.gif') }}"/>
           </div>
           <p></p>
-         <div id="DialogContent"></div>
+         <div id="DialogContent" style="max-height:60vh; overflow-y:auto; text-align:left;"></div>
           <p></p>
         <button type="button" class="btn btn-default hidden" id="DialogFinished" data-dismiss="modal">{{_('OK')}}</button>
       </div>

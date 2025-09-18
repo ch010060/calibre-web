@@ -3445,3 +3445,7 @@ msgstr "顯示隨機書籍"
 #: cps/templates/readcbr.html
 msgid "AI Upscale"
 msgstr "AI放大"
+msgid "AI Lucky"
+msgstr "AI好手氣"
+msgid "Search Integration"
+msgstr "搜尋配置"

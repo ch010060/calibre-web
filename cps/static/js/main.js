@@ -485,6 +485,55 @@ $(function() {
         });
     });
 
+    $("#admin_test_meili_ai").click(function() {
+        $("#DialogHeader").addClass("hidden");
+        $("#DialogFinished").addClass("hidden");
+        $("#DialogContent").html("");
+        $("#spinner2").show();
+        $.ajax({
+            method:"post",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            url: getPath() + "/ajax/test_meili_ai",
+            success: function (data) {
+                $("#spinner2").hide();
+
+                function esc(t){ return $("<div>").text(t || "").html(); }
+                var steps = (data && data.steps) || [];
+                var failed = null;
+                for (var i=0;i<steps.length;i++){ if (steps[i] && steps[i].ok === false) { failed = steps[i]; break; } }
+                var verdictClass = "alert-success";
+                var verdictText = "Test passed";
+                if (failed) {
+                    verdictClass = "alert-danger";
+                    var reason = failed.error || (failed.status ? ("HTTP " + failed.status) : "");
+                    var low = (reason || "").toLowerCase();
+                    if (low.indexOf("timed out") !== -1 || low.indexOf("timeout") !== -1) {
+                        verdictText = (failed.step === "hybrid-search") ? "Vector search failed due to timeout" : ("Step '" + (failed.step||"?") + "' failed due to timeout");
+                    } else if (reason) {
+                        verdictText = (failed.step ? ("Step '" + failed.step + "' failed: ") : "Failed: ") + reason;
+                    } else {
+                        verdictText = (failed.step ? ("Step '" + failed.step + "' failed") : "Test failed");
+                    }
+                } else if (!data || data.ok === false) {
+                    verdictClass = "alert-warning";
+                    verdictText = "Test completed with warnings";
+                }
+
+                var verdictHtml = '<div class="alert ' + verdictClass + '" role="alert">' + esc(verdictText) + '</div>';
+                var jsonHtml = '<pre style="white-space:pre-wrap;">' + esc(JSON.stringify(data, null, 2)) + '</pre>';
+                $("#DialogContent").html(verdictHtml + jsonHtml);
+                $("#DialogFinished").removeClass("hidden");
+            },
+            error: function(xhr){
+                $("#spinner2").hide();
+                $("#DialogContent").html('<div class="alert alert-danger" role="alert">' +
+                    'Request failed: ' + xhr.status + ' ' + esc(xhr.statusText) + '</div>');
+                $("#DialogFinished").removeClass("hidden");
+            }
+        });
+    });
+
     $("#admin_refresh_content_cache").click(function() {
         confirmDialog("admin_refresh_content_cache", "GeneralChangeModal", 0, function () {
             $.ajax({

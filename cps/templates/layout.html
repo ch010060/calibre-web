@@ -65,6 +65,9 @@
         <div class="navbar-collapse collapse">
           {% if g.user.is_authenticated or g.allow_anonymous %}
           <ul class="nav navbar-nav ">
+            {% if g.meilisearch_enabled %}
+            <li><a href="#" id="ai_lucky_btn" title="AI Search"><span class="emoji" aria-hidden="true">💡</span><span class="hidden-sm"> {{_('AI Lucky')}}</span></a></li>
+            {% endif %}
             <li><a href="{{url_for('search.advanced_search')}}" id="advanced_search"><span class="glyphicon glyphicon-search"></span><span class="hidden-sm"> {{_('Advanced Search')}}</span></a></li>
           </ul>
           {% endif %}
@@ -218,6 +221,28 @@
     <script src="{{ url_for('static', filename='js/libs/plugins.js') }}"></script>
     <script src="{{ url_for('static', filename='js/libs/jquery.form.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/uploadprogress.js') }}"> </script>
+    <script>
+      (function(){
+        var btn = document.getElementById('ai_lucky_btn');
+        if (!btn) return;
+        btn.addEventListener('click', function(ev){
+          ev.preventDefault();
+          try {
+            var q = document.getElementById('query');
+            var val = (q && q.value) ? q.value.trim() : '';
+            var base = "{{ url_for('search.simple_search') }}";
+            if (val) {
+              // redirect with ai=1 to trigger hybrid path
+              var u = base + '?query=' + encodeURIComponent(val) + '&ai=1';
+              window.location.href = u;
+            } else {
+              // no query: focus input
+              if (q) q.focus();
+            }
+          } catch (e) {}
+        });
+      })();
+    </script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     {% if g.current_theme == 1 %}
       <script src="{{ url_for('static', filename='js/libs/jquery.visible.min.js') }}"></script>
