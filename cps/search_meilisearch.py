@@ -1,4 +1,6 @@
 import logging
+from ipaddress import ip_address
+from urllib.parse import urlparse, urlunparse
 from typing import Any, Dict, List, Optional, Tuple
 
 try:
@@ -10,6 +12,8 @@ from . import config as app_config
 
 
 log = logging.getLogger(__name__)
+
+_DOC_TEMPLATE_METADATA = "{{doc.title}} {{doc.series}} {{doc.tags}} {{doc.authors}}"
 
 
 def is_enabled() -> bool:
@@ -76,6 +80,44 @@ def extract_ids(search_response: Dict[str, Any]) -> List[int]:
 
 # ----------- AI / hybrid helpers -----------
 
+def _normalize_ai_query(query: str) -> str:
+    """Normalize AI query without affecting non-AI search behavior.
+
+    This is intentionally minimal and currently only expands a small set of
+    known-language synonyms for AI search relevance.
+    """
+    q = (query or "").strip()
+    if not q:
+        return q
+    return q
+
+def _normalize_meili_embedder_url(url: str) -> str:
+    """Return a container-reachable embedder URL for Meili settings.
+
+    Calibre-Web may run on the host, but Meilisearch runs in Docker. Host-local
+    URLs such as localhost are often unreachable from the Meili container, so
+    normalize loopback endpoints to host.docker.internal when appropriate.
+    """
+    if not url:
+        return url
+    try:
+        parsed = urlparse(url)
+        host = parsed.hostname or ""
+        try:
+            parsed_ip = ip_address(host)
+            localish = parsed_ip.is_loopback
+        except Exception:
+            localish = host in {"localhost"}
+        if localish:
+            netloc = "host.docker.internal"
+            if parsed.port:
+                netloc = f"{netloc}:{parsed.port}"
+            return urlunparse((parsed.scheme, netloc, parsed.path, parsed.params, parsed.query, parsed.fragment))
+    except Exception:
+        pass
+    return url
+
+
 def _embed(text: str) -> Optional[List[float]]:
     """Call local embeddings endpoint (Ollama/TEI) and return a vector.
     Uses app_config.ai_embeddings_url / ai_embeddings_model / ai_timeout_ms.
@@ -87,8 +129,14 @@ def _embed(text: str) -> Optional[List[float]]:
     if not url or not model or requests is None:
         return None
     payload: Dict[str, Any] = {}
-    if 'ollama' in url or url.rstrip('/').endswith('/api/embeddings'):
+    u = url.rstrip('/')
+    # Ollama embeddings API shapes:
+    # - /api/embed expects {"input": "..."}
+    # - /api/embeddings expects {"prompt": "..."} (some versions return empty for "input")
+    if u.endswith('/api/embed'):
         payload = {'model': model, 'input': text}
+    elif u.endswith('/api/embeddings') or 'ollama' in u:
+        payload = {'model': model, 'prompt': text}
     else:
         # TEI style
         payload = {'inputs': [text], 'model': model}
@@ -136,6 +184,7 @@ def ai_hybrid_search(query: str) -> Tuple[List[int], int]:
     Prefer Meilisearch-native hybrid (embedder configured).
     Fallback to manual keyword+vector blend if hybrid is not available.
     """
+    query = _normalize_ai_query(query)
     # Try Meilisearch-native hybrid first
     try:
         embedder = getattr(app_config, 'ai_embedder_name', None) or 'ollama'
@@ -208,6 +257,9 @@ def hybrid_search(query: str, embedder_name: str = 'ollama', semantic_ratio: flo
     index = getattr(app_config, 'config_meilisearch_index', 'books') or 'books'
     url = f"{host.rstrip('/')}/indexes/{index}/search"
     try:
+        # Hybrid search may block on the embedder call; give it extra headroom.
+        timeout_ms = getattr(app_config, 'ai_timeout_ms', None) or getattr(app_config, 'config_ai_timeout_ms', 700)
+        timeout_s = max(10.0, float(timeout_ms) / 1000.0 + 5.0)
         payload = {
             'q': query or '',
             'limit': int(limit or 100),
@@ -219,7 +271,7 @@ def hybrid_search(query: str, embedder_name: str = 'ollama', semantic_ratio: flo
             'showMatchesPosition': True,
         }
         log.info("[AI-HYBRID] host=%s index=%s embedder=%s ratio=%.2f", host, index, embedder_name, float(semantic_ratio))
-        resp = requests.post(url, headers=_headers(getattr(app_config, 'config_meilisearch_api_key', '') or None), json=payload, timeout=5)
+        resp = requests.post(url, headers=_headers(getattr(app_config, 'config_meilisearch_api_key', '') or None), json=payload, timeout=timeout_s)
         resp.raise_for_status()
         return resp.json()
     except Exception as ex:  # pragma: no cover
@@ -267,7 +319,8 @@ def ensure_index_with_vectors(vector_dim: int) -> bool:
 
 def ensure_embedder_on_index(embedder_name: str, url: str, model: str) -> bool:
     """Ensure the configured Meilisearch index has an embedder entry.
-    If an embedder already exists, do nothing. Returns True on success.
+    If an embedder already exists but differs from the requested config, update it.
+    Returns True on success.
     """
     host = getattr(app_config, 'config_meilisearch_host', '')
     index = getattr(app_config, 'config_meilisearch_index', 'books') or 'books'
@@ -275,15 +328,6 @@ def ensure_embedder_on_index(embedder_name: str, url: str, model: str) -> bool:
         return False
     headers = _headers(getattr(app_config, 'config_meilisearch_api_key', '') or None)
     try:
-        # If settings already contain this embedder, skip
-        e = requests.get(f"{host.rstrip('/')}/indexes/{index}/settings/embedders", headers=headers, timeout=5)
-        if e.status_code == 200:
-            try:
-                cur = e.json() or {}
-            except Exception:
-                cur = {}
-            if embedder_name in cur:
-                return True
         # Choose provider source heuristically (default to ollama)
         source = 'ollama'
         try:
@@ -296,15 +340,34 @@ def ensure_embedder_on_index(embedder_name: str, url: str, model: str) -> bool:
         except Exception:
             source = 'ollama'
 
+        desired = {
+            "source": source,
+            "url": _normalize_meili_embedder_url(url),
+            "model": model,
+            "documentTemplate": _DOC_TEMPLATE_METADATA,
+        }
+
+        # If settings already contain this embedder with the desired config, skip
+        e = requests.get(f"{host.rstrip('/')}/indexes/{index}/settings/embedders", headers=headers, timeout=5)
+        if e.status_code == 200:
+            try:
+                cur = e.json() or {}
+            except Exception:
+                cur = {}
+            existing = cur.get(embedder_name) if isinstance(cur, dict) else None
+            if isinstance(existing, dict):
+                same = True
+                for k, v in desired.items():
+                    if (existing.get(k) or "") != (v or ""):
+                        same = False
+                        break
+                if same:
+                    return True
+
         # Patch embedders with provided configuration
         payload = {
             "embedders": {
-                embedder_name: {
-                    "source": source,
-                    "url": url,
-                    "model": model,
-                    "documentTemplate": "{{doc.title}} {{doc.series}} {{doc.tags}} {{doc.authors}}"
-                }
+                embedder_name: desired
             }
         }
         s = requests.patch(f"{host.rstrip('/')}/indexes/{index}/settings", headers=headers, json=payload, timeout=5)

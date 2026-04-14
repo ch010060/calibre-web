@@ -378,14 +378,62 @@ def render_prepare_search_form(cc):
                                  series=series,shelves=shelves, title=_(u"Advanced Search"), cc=cc, page="advsearch",preferred_tags=current_user.preferred_tags)
 
 
+def _ai_rerank_tagset_ids(term, ids):
+    """Rerank AI search results so exact tag-set matches come before partial matches.
+
+    This is a lightweight heuristic intended to stabilize ordering when the UI
+    sends a whitespace-separated tag query in AI mode.
+    """
+    if not term or not ids:
+        return ids
+    tokens = [t for t in meili._normalize_ai_query(term).split() if t]
+    token_set = set(tokens)
+    if not token_set:
+        return ids
+
+    # Gather tag names present in the current result set.
+    tag_rows = calibre_db.session.query(
+        db.books_tags_link.c.book,
+        db.Tags.name
+    ).join(db.Tags, db.books_tags_link.c.tag == db.Tags.id)\
+        .filter(db.books_tags_link.c.book.in_(list(ids))).all()
+
+    present_tags = {tname for _, tname in tag_rows if tname}
+    groups = []
+
+    for t in token_set:
+        if t in present_tags:
+            groups.append({t})
+
+    if not groups:
+        return ids
+
+    book_tags = {i: set() for i in ids}
+    for bid, tname in tag_rows:
+        try:
+            book_tags[int(bid)].add(tname)
+        except Exception:
+            continue
+
+    orig_pos = {i: pos for pos, i in enumerate(ids)}
+    scores = {
+        i: sum(1 for g in groups if book_tags.get(i, set()).intersection(g))
+        for i in ids
+    }
+    ordered_ids = sorted(ids, key=lambda i: (-scores.get(i, 0), orig_pos.get(i, 0)))
+    # Ensure stable output (no accidental duplicates).
+    return list(dict.fromkeys(ordered_ids))
+
+
 def render_search_results(term, offset=None, order=None, limit=None):
     # Prefer Meilisearch if configured, fall back to SQL LIKE search
     if meili.is_enabled():
         try:
             use_ai = bool(request.args.get('ai')) or bool(request.args.get('ai') == '1')
+            ai_mode = use_ai and getattr(config, 'ai_search_enabled', False)
             ids = []
             total = 0
-            if use_ai and getattr(config, 'ai_search_enabled', False):
+            if ai_mode:
                 ids, total = meili.ai_hybrid_search(term)
             else:
                 ms = meili.search(term, offset or 0, limit or config.config_books_per_page)
@@ -393,22 +441,39 @@ def render_search_results(term, offset=None, order=None, limit=None):
                     ids = meili.extract_ids(ms)
                     total = int(ms.get('estimatedTotalHits') or ms.get('nbHits') or len(ids))
             if ids:
-                # Fetch matching books preserving relevance order (query pure Books ORM rows)
-                q = calibre_db.session.query(db.Books) \
+                # When AI search is enabled, improve stability for tag-set matches
+                # by re-ranking results so books matching *all* query tag tokens
+                # appear before partial matches.
+                ordered_ids = ids
+                if ai_mode:
+                    try:
+                        ordered_ids = _ai_rerank_tagset_ids(term, ids)
+                    except Exception:
+                        # Never break search due to re-ranking.
+                        ordered_ids = ids
+
+                # Fetch matching books preserving relevance order.
+                #
+                # For template compatibility we must return the same "combo" shape
+                # used by other search flows:
+                #   (Books, is_archived, read_status)
+                # so that templates can use `entry.Books` and `entry[2]`.
+                q = calibre_db.generate_linked_query(config.config_read_column, db.Books) \
                     .outerjoin(db.books_series_link, db.Books.id == db.books_series_link.c.book) \
                     .outerjoin(db.Series) \
                     .filter(calibre_db.common_filters(True)) \
-                    .filter(db.Books.id.in_(ids)) \
+                    .filter(db.Books.id.in_(ordered_ids)) \
                     .all()
 
                 # Order results according to Meilisearch/AI list
-                by_id = {b.id: b for b in q}
-                ordered = [by_id[i] for i in ids if i in by_id]
+                by_id = {t[0].id: t for t in q}
+                ordered = [by_id[i] for i in ordered_ids if i in by_id]
 
                 off = int(offset or 0)
                 lim = int(limit or config.config_books_per_page)
                 pagination = Pagination((off / lim + 1), lim, total)
 
+                # Store combined ids for UI paging/history (expects element[0].id).
                 ub.store_combo_ids(ordered)
                 entries = calibre_db.order_authors(ordered, list_return=True, combined=True)
                 order_name = None
@@ -516,5 +581,3 @@ def suggest():
         suggestions = []
 
     return jsonify({'suggestions': suggestions})
-
-
